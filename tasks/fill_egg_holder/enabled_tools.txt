@@ -1,0 +1,3 @@
+# RGB-only tools; legacy depth-dependent tools remain archived but disabled.
+carton_items
+table_plane

@@ -1,0 +1,6 @@
+# RGB-only task tools; legacy depth consumers are not exposed.
+table_plane
+rgb_geometry
+circle_geometry
+rgb_transfer
+tcp_route
