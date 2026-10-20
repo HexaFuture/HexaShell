@@ -1,0 +1,6 @@
+`robo linear_push <left|right> --u U --v V --end_x X --end_y Y [--end_z Z] [--camera head|wrist_l|wrist_r] [--retract .05]` measures a live selected point, executes one straight stroke to the world endpoint, then retracts vertically; delegates to stroke_here.
+The hand must be commanded closed. U,V are pixels in the selected camera (default head); distances are metres. Orientation and the measured point-to-TCP offset stay fixed; no positioning or initial lift probe.
+end_z defaults to measured starting height. Stroke length .02..0.50 m, height change <=.04 m, retract .025..0.20 m; TCP separation from the opposite hand must be >=.16 m through retraction.
+Nominal chain IK runs before motion when the API estimator exists; ik_checked=false means it is absent. Invalid input/depth, failed estimates, separation, clipping, pose error, placement contradiction or exhaustion stops execution.
+Returns plan_ok, plan_fail_reason, measured geometry, ik_preflight and per-stage motion feedback. A bounded preceding-waypoint attempt after eligible stationary stroke IK failure may return partial_stroke=true with plan_ok=false.
+Contact height, rigid attachment, unseen geometry and containment are unverified; predicted occupancy does not prove retention. Failure may leave the hand low; neither gripper changes. Motion costs action steps; the command costs one budget unit.

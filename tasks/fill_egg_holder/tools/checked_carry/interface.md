@@ -1,0 +1,8 @@
+`robo checked_carry ARM --x X --y Y --z Z --load_x LX --load_y LY --load_z LZ --load_radius R [--margin .03] [--radius .03] [--segment .08]`: transport an already-held localized round load, descend, open and retreat; no grasp or orientation change.
+ARM=left|right; XYZ is nominal release TCP; LXYZ is current load center; all coordinates are world metres. Requires commanded closed gripper, fresh center within 12 mm of LXYZ and within 60 mm of TCP, with radius agreement within 3 mm.
+Load radius .01–.05, margin .03–.12, corridor radius .03–.10, segment .03–.08; destination distance ≤.65 m. Invalid input or missing load evidence fails before motion.
+Depth-covered routes expand for observed load extent; release Z may rise ≤30 mm, XY stays fixed. Missing depth, blocked column, excessive height or failed read-only IK preflight stops before motion; estimates do not prove collision freedom.
+Horizontal portions ≤80 mm; loaded descents are separate vertical portions ≤30 mm. Every loaded endpoint requires depth retention within 12 mm of a fixed initial anchor; upward drift >8 mm during descent stops before further motion or opening.
+Stops on planning failure, clipping, episode end or TCP error >8 mm / 6 degrees. No automatic retries or rollback. Every motion consumes action steps.
+Returns plan_ok, plan_fail_reason, stages, transport_anchor, retention_checks, release_column, release_floor, route, release_commanded and placement_verified:false. Failure after opening retains release_commanded:true.
+Surface matching cannot establish identity, grasp, seating, vacancy or unseen clearance. A new invocation establishes a new visual anchor.
