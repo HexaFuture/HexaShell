@@ -1,0 +1,78 @@
+# HexaShell's settings for a RoboDojo run (read by deploy.py; the first block is XPolicyLab's own).
+# Every setting from api on can be overridden per run by a HEXASHELL_<NAME> environment
+# variable, e.g. HEXASHELL_MOTION=v2, HEXASHELL_SKILLS=1, HEXASHELL_MAX_TURNS=6 (booleans: 1, true,
+# yes or on). Two more are left at their defaults here: request_timeout_s (900) and script (a file of
+# cells run instead of asking the model, for offline tests; hexashell/runtime/script.py).
+# The values below are those of our RoboDojo test with skills; the test without them set only skills: false.
+# The Open tasks, which have no skills, were run with skills: false, reasoning_effort: high, max_tokens: 8192,
+# images_max: 90 and images_low: 60 (see the README).
+policy_name: HexaShell
+protocol: ws
+host: localhost
+port: null
+bench_name: null
+task_name: null
+ckpt_name: null
+env_cfg_type: null
+seed: null
+action_type: joint
+gpu_id: null
+eval_batch: false
+
+# -- the agent ----------------------------------------------------------------------------------
+# api: openai = an OpenAI-compatible chat endpoint (<api_base>/chat/completions); anthropic = an
+# Anthropic Messages endpoint for Claude (<api_base>/messages, streamed; adaptive thinking whose
+# depth is reasoning_effort and whose summary is shown unless thinking_display is omitted).
+# The key is read from api_key_file when it exists, else from $OPENAI_API_KEY; it never reaches the
+# process that runs the model's code.  ca_file: a private CA for the endpoint's certificate.
+api: openai
+api_base: https://api.example.com/v1
+api_key_file: ~/.config/hexashell/api-key
+ca_file: ""
+model: gpt-6-astra
+reasoning_effort: xhigh
+thinking_display: summarized
+max_tokens: 32000
+# stream the replies (gateways often rate-limit non-streaming requests)
+stream: true
+# only for a self-hosted Qwen on vLLM (api openai): send each reply's reasoning back with it in the
+# history (a "reasoning" key, which vLLM renders into the chat template's <think> block), for a model
+# trained on conversations that kept it.  Keep it off for gpt-6-astra and other hosted models: they send
+# back only short reasoning titles, do not use them, and the gateway may refuse the extra key.
+history_reasoning: false
+# whether the task's skill note is added (skills/robodojo/<task>.md)
+skills: true
+# official scoring ladder in the task card
+ladder: true
+
+# -- limits of one episode ----------------------------------------------------------------------
+max_turns: 100
+budget_s: 5400
+nudges: 3
+# the conversation keeps at most images_max pictures and images_bytes_max bytes of them as sent (base64,
+# 4/3 of the JPEG; the gateway takes 8-10 MB per request); beyond either the oldest go, down to images_low
+# and 70% of the bytes.  The 3 start pictures stay.  With Claude the replies after a dropped picture also
+# lose their thinking: raise both (e.g. 90).
+images_max: 20
+images_low: 14
+images_bytes_max: 10000000
+jpeg_quality: 90
+# one cell: CPU seconds, seconds without a robot call, seconds in all
+cell_cpu_s: 120
+cell_idle_s: 150
+cell_total_s: 1800
+# motion speed profile: v1 = every action at the slow end limits; v2 = faster mid-motion (the tested
+# one); v3 = v2 with one slow end action instead of two on straight lines by an empty hand
+motion: v2
+
+# -- perception ---------------------------------------------------------------------------------
+# the machine's shared SAM3 service (services/sam3_server.py)
+sam3_url: http://127.0.0.1:18300
+
+# -- plumbing -----------------------------------------------------------------------------------
+# get_action answers "wait" after poll_s seconds without an action (deploy.py asks again)
+poll_s: 20.0
+# on_trial_end waits at most this long for the episode's record (below the client's 120 s timeout)
+wrap_up_s: 30.0
+# per-episode records, relative to the HexaShell checkout ($HEXASHELL_RESULT_DIR overrides)
+result_dir: results

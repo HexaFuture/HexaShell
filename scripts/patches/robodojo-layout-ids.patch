@@ -1,0 +1,28 @@
+RoboDojo (RoboDojo-Benchmark/RoboDojo 09bd5f5): ROBODOJO_LAYOUT_IDS="10,11" makes an evaluation run exactly
+these layouts of the seed, in this order. scripts/run_one.sh and scripts/batch.sh use it to run single layouts;
+RoboDojo's own evaluation (robodojo.sh eval without the variable) is unchanged.
+
+    git -C "$ROBODOJO_ROOT" apply /path/to/HexaShell/scripts/patches/robodojo-layout-ids.patch
+
+diff --git a/env/seed_manager/seed_manager.py b/env/seed_manager/seed_manager.py
+index 3c8c74f..4aa7f6a 100644
+--- a/env/seed_manager/seed_manager.py
++++ b/env/seed_manager/seed_manager.py
+@@ -43,6 +43,17 @@ class SeedManager:
+             self.seed_info[idx] = {"scene_layout": file_path}
+ 
+         all_layout_ids = list(range(len(matching_files)))
++        # Local addition (2026-10-22): ROBODOJO_LAYOUT_IDS="50,51" evaluates exactly these layouts, in this
++        # order, e.g. the ones past a task's eval_nums. A layout abandoned as unstable is not replaced by another.
++        only = os.environ.get("ROBODOJO_LAYOUT_IDS", "").strip()
++        if only:
++            wanted = [int(s) for s in only.split(",") if s.strip()]
++            missing = [s for s in wanted if s not in all_layout_ids]
++            if missing:
++                raise ValueError(f"ROBODOJO_LAYOUT_IDS {missing}: {self.task_name} seed {self.eval_seed} "
++                                 f"has layouts 0..{len(all_layout_ids) - 1}")
++            all_layout_ids = wanted
++            print(f"[SeedManager] ROBODOJO_LAYOUT_IDS: layouts {wanted}")
+         excluded = set(int(s) for s in (completed_layout_ids or [])) | set(int(s) for s in (abandoned_layout_ids or []))
+         if excluded:
+             self.seed_list: List[int] = [s for s in all_layout_ids if s not in excluded]

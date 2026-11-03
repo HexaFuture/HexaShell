@@ -1,0 +1,231 @@
+--- a/robocasa/__init__.py
++++ b/robocasa/__init__.py
+@@ -1002,15 +1002,11 @@
+ 
+ import mujoco
+ 
+-assert (
+-    mujoco.__version__ == "3.3.1"
+-), "MuJoCo version must be 3.3.1. Please run pip install mujoco==3.3.1"
++# [capx-relax-assert] mujoco version assert disabled
+ 
+ import numpy
+ 
+-assert numpy.__version__ in [
+-    "2.2.5",
+-], "numpy version must be 2.2.5. Please install this version."
++# [capx-relax-assert] numpy version assert disabled
+ 
+ import robosuite
+ 
+--- a/robocasa/environments/kitchen/kitchen.py
++++ b/robocasa/environments/kitchen/kitchen.py
+@@ -1235,8 +1235,6 @@
+         textures = asset.findall("texture")
+         all_elements = meshes + textures
+ 
+-        robocasa_path_split = os.path.split(robocasa.__file__)[0].split("/")
+-
+         # replace robocasa-specific asset paths
+         for elem in all_elements:
+             old_path = elem.get("file")
+@@ -1258,18 +1256,20 @@
+                         if val == "robosuite"
+                     ]
+                 elif "/robocasa/" in old_path:
+-                    check_lst = [
+-                        loc
+-                        for loc, val in enumerate(old_path_split)
+-                        if val == "robocasa"
+-                    ]
++                    asset_suffix = old_path.split("models/assets/", 1)[1]
++                    elem.set(
++                        "file",
++                        os.path.join(robocasa.models.assets_root, asset_suffix),
++                    )
++                    continue
+                 else:
+                     raise ValueError
+ 
+                 ind = max(check_lst)  # last occurrence index
+-                new_path_split = robocasa_path_split + old_path_split[ind + 1 :]
+-
+-                new_path = "/".join(new_path_split)
++                new_path = "/".join(
++                    os.path.split(robocasa.__file__)[0].split("/")
++                    + old_path_split[ind + 1 :]
++                )
+                 elem.set("file", new_path)
+ 
+         # set cameras
+--- a/robocasa/models/__init__.py
++++ b/robocasa/models/__init__.py
+@@ -1,3 +1,5 @@
+ import os
+ 
+-assets_root = os.path.join(os.path.dirname(__file__), "assets")
++assets_root = os.path.abspath(
++    os.environ.get("HEXA_ROBOCASA_ASSETS", os.path.join(os.path.dirname(__file__), "assets"))
++)
+--- a/robocasa/models/objects/objects.py
++++ b/robocasa/models/objects/objects.py
+@@ -1,15 +1,42 @@
+ import os
+-import time
++import tempfile
+ import xml.etree.ElementTree as ET
+ 
+ import numpy as np
+ import robosuite
+ import robosuite.utils.transform_utils as T
+ from robosuite.models.objects import MujocoXMLObject
+-from robosuite.models.base import MujocoXML
+ from robosuite.utils.mjcf_utils import array_to_string, string_to_array, find_elements
+ 
+ 
++def write_temporary_mjcf(xml_str, source_dir):
++    """把派生 MJCF 写到不可变资产树之外。
++
++    ``MujocoXML`` 会从派生 XML 所在目录解析相对资产路径，因此写入进程临时
++    目录前，必须先以原模型目录为基准把全部文件依赖改为绝对路径。
++    """
++
++    root = ET.fromstring(xml_str)
++    asset = root.find("asset")
++    if asset is not None:
++        for node in asset.findall("./*[@file]"):
++            file_path = node.get("file")
++            if file_path and not os.path.isabs(file_path):
++                node.set("file", os.path.normpath(os.path.join(source_dir, file_path)))
++    descriptor, path = tempfile.mkstemp(
++        prefix=f"robocasa-{os.getpid()}-",
++        suffix=".xml",
++    )
++    try:
++        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
++            stream.write(ET.tostring(root, encoding="unicode"))
++    except BaseException:
++        if os.path.exists(path):
++            os.remove(path)
++        raise
++    return path
++
++
+ class MujocoXMLObjectRobocasa(MujocoXMLObject):
+     def set_scale(self, scale, obj=None):
+         """
+@@ -244,25 +271,20 @@
+         # write modified xml (and make sure to postprocess any paths just in case)
+         xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
+         xml_str = self.postprocess_model_xml(xml_str)
+-        time_str = str(time.time()).replace(".", "_")
+-        new_xml_path = os.path.join(folder, "{}_{}.xml".format(time_str, os.getpid()))
+-        f = open(new_xml_path, "w")
+-        f.write(xml_str)
+-        f.close()
+-
+-        # initialize object with new xml we wrote
+-        super().__init__(
+-            fname=new_xml_path,
+-            name=name,
+-            joints=[dict(type="free", damping="0.0005")],
+-            obj_type="all",
+-            duplicate_collision_geoms=False,
+-            scale=scale,
+-        )
+-
+-        # clean up xml - we don't need it anymore
+-        if os.path.exists(new_xml_path):
+-            os.remove(new_xml_path)
++        new_xml_path = write_temporary_mjcf(xml_str, folder)
++        try:
++            # 使用派生 XML 初始化；无论解析或模型构造是否失败都必须清理。
++            super().__init__(
++                fname=new_xml_path,
++                name=name,
++                joints=[dict(type="free", damping="0.0005")],
++                obj_type="all",
++                duplicate_collision_geoms=False,
++                scale=scale,
++            )
++        finally:
++            if os.path.exists(new_xml_path):
++                os.remove(new_xml_path)
+ 
+         self._regions = dict()
+         self._setup_region_dict()
+--- a/robocasa/utils/model_zoo/mjcf_obj.py
++++ b/robocasa/utils/model_zoo/mjcf_obj.py
+@@ -1,14 +1,13 @@
+ import os
+-import time
+ import numpy as np
+-import tempfile
+-import random
+-import string
+ import xml.etree.ElementTree as ET
+ 
+ import robosuite
+ 
+-from robocasa.models.objects.objects import MujocoXMLObjectRobocasa
++from robocasa.models.objects.objects import (
++    MujocoXMLObjectRobocasa,
++    write_temporary_mjcf,
++)
+ from robosuite.utils.mjcf_utils import array_to_string, string_to_array
+ 
+ import robosuite.utils.transform_utils as T
+@@ -150,27 +149,21 @@
+         # write modified xml (and make sure to postprocess any paths just in case)
+         xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
+         xml_str = postprocess_model_xml(xml_str)
+-        time_str = str(time.time()).replace(".", "_")
+-        new_xml_path = os.path.join(folder, "{}_{}.xml".format(time_str, os.getpid()))
+-        f = open(new_xml_path, "w")
+-        f.write(xml_str)
+-        f.close()
+-        # print(f"Write to {new_xml_path}")
+-
+-        # initialize object with new xml we wrote
+-        super().__init__(
+-            # xml_path_completion("objects/{}.xml".format(obj_name)),
+-            fname=new_xml_path,
+-            name=name,
+-            joints=[dict(type="free", damping="0.0005")],
+-            # joints=None,
+-            obj_type="all",
+-            duplicate_collision_geoms=False,
+-        )
+-
+-        # clean up xml - we don't need it anymore
+-        if os.path.exists(new_xml_path):
+-            os.remove(new_xml_path)
++        new_xml_path = write_temporary_mjcf(xml_str, folder)
++        try:
++            # initialize object with new xml we wrote
++            super().__init__(
++                # xml_path_completion("objects/{}.xml".format(obj_name)),
++                fname=new_xml_path,
++                name=name,
++                joints=[dict(type="free", damping="0.0005")],
++                # joints=None,
++                obj_type="all",
++                duplicate_collision_geoms=False,
++            )
++        finally:
++            if os.path.exists(new_xml_path):
++                os.remove(new_xml_path)
+ 
+     def _get_geoms(self, root, _parent=None):
+         """
+--- a/robocasa/utils/texture_swap.py
++++ b/robocasa/utils/texture_swap.py
+@@ -11,7 +11,7 @@
+ import robocasa
+ 
+ TEXTURES_DIR = (
+-    Path(inspect.getfile(robocasa)).parent / "models" / "assets" / "generative_textures"
++    Path(robocasa.models.assets_root) / "generative_textures"
+ )
+ 
+ CABINET_TEX_NAMES = [

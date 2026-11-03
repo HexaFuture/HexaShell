@@ -1,0 +1,28 @@
+# HexaShell's agent settings for the benchmarks run by hexashell.benches.run (RoboCasa, ...).
+# Each benchmark sets its own limits first (RoboCasa: 40 replies for atomic tasks, 100 for composite
+# ones, 2 h); the values here override them, HEXASHELL_<NAME> variables override these, and
+# --set NAME=VALUE overrides all.  Machine paths are not here: see hexashell/benches/run.py.
+
+# An OpenAI-compatible chat endpoint.  The key is read from api_key_file when it exists, else from
+# $OPENAI_API_KEY; it never reaches the process that runs the model's code nor the simulator.
+api_base: https://api.example.com/v1
+api_key_file: ~/.config/hexashell/api-key
+model: gpt-6-astra
+reasoning_effort: high
+max_tokens: 8192
+stream: true
+# whether skills/<bench>/<task>.md is added to the card (the system prompt is prompts/<bench>/)
+skills: false
+
+nudges: 3
+# the picture window: see xpolicylab/HexaShell/deploy.yml
+images_max: 20
+images_low: 14
+images_bytes_max: 10000000
+jpeg_quality: 90
+cell_cpu_s: 120
+cell_idle_s: 150
+cell_total_s: 1800
+
+# the machine's shared SAM3 service (services/sam3_server.py)
+sam3_url: http://127.0.0.1:18300

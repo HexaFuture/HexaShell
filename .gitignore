@@ -1,0 +1,16 @@
+# per-episode records, run logs and frozen code copies stay on the machines
+results/
+logs/
+frozen/
+*.log
+# this machine's paths (copy config/env.example.sh)
+config/env.sh
+# benchmark environments and data made by scripts/setup/, the SAM3 checkpoint
+.venvs/
+.bench-data/
+checkpoints/
+__pycache__/
+*.pyc
+.pytest_cache/
+# leftovers of in-place script edits (scripts/*.new is written, then moved over the script)
+*.new

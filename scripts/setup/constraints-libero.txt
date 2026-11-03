@@ -1,0 +1,9 @@
+# Pins for the LIBERO-PRO simulator venv (bench-libero); same simulator stack as RPent[libero-pro].
+# mujoco 3.4+ changes LIBERO settling (RLinf/RLinf#1460); RPent pins 3.3.0.
+mujoco==3.3.0
+numpy==1.26.4
+gym==0.26.2
+robosuite==1.5.2
+bddl==3.6.0
+# LIBERO-PRO's own constraints.txt also pins scikit-image (not otherwise needed).
+torch==2.7.1+cpu

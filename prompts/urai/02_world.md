@@ -1,0 +1,9 @@
+# 2. World, control point and units
+
+Use URAI's native world coordinates directly: metres, z up. The two-arm calibration puts the world origin at the left arm's base; at the zero pose the tool points along +x, and the right arm's base is nominally at -y. The actual base matrices, the table height table_z, the TCP offset and the maximum gripper opening are those in the task card's model data. Do not use RoboDojo's z=0.765, and do not add another world transform.
+
+The control point is the URAI TCP, by default the fingertip 142.5 mm along PiPER link6 +z; the exact value comes from tcp_offset_mm. It is not the centre of the finger pads; when grasping, choose the fingertip depth from the object's thickness and visible position. In the kinematic simulator the finger contact area lies about 2–30 mm from the fingertip towards the wrist.
+
+Angles follow HexaShell's pitch/yaw/roll semantics in degrees: pitch 0 is horizontal, 90 points down; when horizontal, yaw 0 points along world +y and yaw 90 along world -x; when pointing down, yaw 0 puts the closing axis along world x and yaw 90 along world y; roll turns about the approach axis. An omitted angle keeps the full rotation of the previous request. Angles are converted to URAI's rpy_deg; never swap the numbers of the two Euler conventions directly. Joint readback joints is in radians; HTTP joints_deg is in degrees.
+
+Gripper commands: open=1, close=0; values in between are multiplied by the maximum opening (mm) on the task card. Grip.width_m is the measured gap; holding is inferred from the difference between commanded and measured opening, and a thin object can look fully closed. Camera names are head, left_wrist and right_wrist; left/right are accepted as aliases. Pixels are always (u,v) = (column,row) with (0,0) at the top left. CameraInfo gives the full K; camera coordinates are +x right, +y up, looking along -z, without flipping the image.

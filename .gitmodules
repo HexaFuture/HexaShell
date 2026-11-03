@@ -1,0 +1,8 @@
+[submodule "third_party/robocasa"]
+	path = third_party/robocasa
+	url = https://github.com/robocasa/robocasa.git
+	ignore = dirty
+[submodule "third_party/robosuite"]
+	path = third_party/robosuite
+	url = https://github.com/ARISE-Initiative/robosuite.git
+	ignore = dirty
