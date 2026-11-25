@@ -92,6 +92,39 @@ def libero_table(best):
         print(f"  {p:8}" + "".join(f"{f'{c[0]}/{c[2]} ({c[1]})' if c else '-':>16}" for c in row))
 
 
+def liberopro2_table(best):
+    """LIBERO-Pro 2.0: the leaderboard's scores (a cell's tasks pooled, a group the mean of its cells, Δ against
+    Base), then successes/episodes per case and suite."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    from hexashell.benches.liberopro2 import protocol as LP2
+
+    outcomes = [(task, bool(r.get("success"))) for (task, _), r in best.items() if r.get("bench") == "liberopro2"]
+    if not outcomes:
+        return
+    s = LP2.score(outcomes)
+
+    def pct(v, signed=False):
+        return "-" if v is None else f"{100 * v:+.1f}" if signed else f"{100 * v:.1f}"
+
+    def group(g):
+        return f"{pct(g['score'])} (Δ {pct(g['delta'], True)}, {g['cells']} cells)"
+
+    print(f"  LIBERO-Pro 2.0 (%): Base {pct(s['base'])}  Static {group(s['static'])}  Dynamic {group(s['dynamic'])}  "
+          f"Overall {group(s['overall'])}")
+    print("  " + " " * 13 + f"{'static':>24}{'dynamic':>24}")
+    for name in LP2.CATEGORIES:
+        st, dy = s["static"]["categories"][name], s["dynamic"]["categories"][name]
+        texts = [f"{pct(g['score'])} ({pct(g['delta'], True)})" for g in (st, dy)]
+        print(f"  {name:13}" + "".join(f"{t:>24}" for t in texts))
+    print("  successes/episodes:" + "".join(f"{x.replace('libero_', ''):>10}" for x in LP2.SUITES))
+    for case in LP2.CASES:
+        row = [s["cells"].get(f"{suite}/{case}") for suite in LP2.SUITES]
+        if any(row):
+            name = case + (f" ({LP2.PAPER_ID[case]})" if case in LP2.PAPER_ID else "")
+            texts = [f"{c['successes']}/{c['episodes']}" if c else "-" for c in row]
+            print(f"  {name:19}" + "".join(f"{t:>10}" for t in texts))
+
+
 def main():
     args = sys.argv[1:]
     show_tasks = "--per-task" in args
@@ -113,6 +146,8 @@ def main():
         if show_tasks:
             for task, results in sorted(per_task(best).items()):
                 print(f"    {task:32} {sum(results):3}/{len(results)}")
+        if any(r.get("bench") == "liberopro2" for r in best.values()):
+            liberopro2_table(best)
     if len(runs) > 1:
         tasks = sorted({k[0] for _, b in runs for k in b})
         print("per task (successes / episodes):")

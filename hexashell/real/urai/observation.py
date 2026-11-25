@@ -50,8 +50,8 @@ class Observation:
     arms: dict
 
     @classmethod
-    def from_packet(cls, packet: dict, *, step: int) -> Observation:
-        name = URAI_TO_CAMERA[packet["camera"]]
+    def from_packet(cls, packet: dict, *, step: int, names: dict | None = None) -> Observation:
+        name = (URAI_TO_CAMERA if names is None else names)[packet["camera"]]
         rgb = np.load(io.BytesIO(base64.b64decode(packet["rgb"]["data"])), allow_pickle=False)
         depth = np.load(io.BytesIO(base64.b64decode(packet["depth"]["data"])), allow_pickle=False)
         k = np.asarray(packet["k"], float)

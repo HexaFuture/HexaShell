@@ -12,6 +12,7 @@ the gripper's reading relates to the fingers, so the same driver runs another ta
 from __future__ import annotations
 
 import math
+import threading
 from dataclasses import dataclass
 from typing import Callable, Protocol, Sequence
 
@@ -205,6 +206,10 @@ class EpisodeOver(Exception):
     def __init__(self, verdict: dict | None = None):
         super().__init__("the episode is over")
         self.verdict = verdict or {}
+
+
+class PairRefused(Exception):
+    """Two arms' motions that cannot run at once; nothing moved."""
 
 
 class MotionError(Exception):
@@ -432,10 +437,90 @@ class Stall:
         return went < STOP_MOVED * asked and went < STOP_MOVED_M
 
 
+def stretch(actions: list, start, n: int) -> list:
+    """The same path in n actions (the slower of two arms in step sets the pace); never fewer."""
+    if not actions or len(actions) >= n:
+        return actions
+    points = np.vstack([start, *actions])
+    where = np.linspace(0.0, len(actions), n + 1)[1:]
+    low = np.minimum(where.astype(int), len(actions) - 1)
+    share = (where - low)[:, None]
+    return list(points[low] * (1.0 - share) + points[low + 1] * share)
+
+
+class Pair:
+    """Two arms' motions at once.  Each runs in its own thread, so goto() and gripper() stay what they
+    are for one arm; every send() of either waits here until the other has asked too (or has finished),
+    and the thread that called Driver.both sends one action that moves both: one step in RoboDojo."""
+
+    def __init__(self, driver: Driver, moving: list[str], planning: list[str], together: bool):
+        self.driver, self.together = driver, together
+        self.cv = threading.Condition()
+        self.running, self.planning = set(moving), set(planning)
+        self.plans: dict[str, tuple[list, np.ndarray]] = {}
+        self.asked: dict[str, dict] = {}
+        self.arm_of: dict[threading.Thread, str] = {}
+        self.round = 0
+        self.halted = False  # either arm stopped early: the other stops too
+        self.clash = ""      # why the two plans cannot run
+        self.error: EpisodeOver | None = None
+
+    def agree(self, arm: str, actions: list, q_now: np.ndarray) -> list:
+        """Both plans are known before either arm moves: in step, the longer sets the length of both."""
+        with self.cv:
+            self.plans[arm] = (actions, q_now)
+            if self.planning <= set(self.plans) and len(self.plans) == 2:
+                self.clash = self.driver.arms_meet(self.plans)
+            self.cv.notify_all()
+            self.cv.wait_for(lambda: self.planning <= set(self.plans) or self.clash)
+            if self.clash:
+                raise PairRefused(self.clash)
+            if self.together and len(self.plans) == 2:
+                return stretch(actions, q_now, max(len(a) for a, _ in self.plans.values()))
+            return actions
+
+    def submit(self, arm: str, joints: dict | None) -> None:
+        with self.cv:
+            self.asked[arm] = joints or {}
+            turn = self.round
+            self.cv.notify_all()
+            self.cv.wait_for(lambda: self.round != turn)
+            if self.error is not None:
+                raise self.error
+
+    def finish(self, arm: str) -> None:
+        with self.cv:
+            self.running.discard(arm)
+            if arm in self.planning and arm not in self.plans:
+                self.planning.discard(arm)
+                self.clash = self.clash or f"{arm} could not plan its motion"
+            self.cv.notify_all()
+
+    def run(self) -> None:
+        while True:
+            with self.cv:
+                self.cv.wait_for(lambda: set(self.asked) >= self.running)
+                if not self.running:
+                    return
+                joints: dict = {}
+                for asked in self.asked.values():
+                    joints.update(asked)
+                self.asked.clear()
+            try:
+                self.driver.transmit(joints)
+            except EpisodeOver as exc:
+                self.error = exc
+            with self.cv:
+                self.round += 1
+                self.cv.notify_all()
+
+
 class Driver:
     def __init__(self, link: Link, first: Snapshot, log: Callable[[dict], None] | None = None,
-                 speed: ik.Speed | None = None, rig: Rig = ROBODOJO):
+                 speed: ik.Speed | None = None, rig: Rig = ROBODOJO, keeper_stop: bool = False):
         self.link = link
+        #: stop a moving arm when what the other, still arm holds slips out (on with the setting two_hands)
+        self.keeper_stop = keeper_stop
         self.speed = speed or ik.SPEEDS["v1"]  # how far one action may move (see ik.Speed)
         self.rig = rig
         self.now = first
@@ -485,6 +570,7 @@ class Driver:
         self.offered = False
         self.actions = 0
         self.log = log or (lambda event: None)
+        self.pair: Pair | None = None  # while two arms move at once (see both)
 
     def new_turn(self) -> None:
         """The model has seen this turn's results."""
@@ -492,6 +578,14 @@ class Driver:
 
     # -- low level -------------------------------------------------------------------------------
     def send(self, joints: dict[str, np.ndarray] | None = None) -> Snapshot:
+        pair = self.pair
+        arm = pair.arm_of.get(threading.current_thread()) if pair is not None else None
+        if arm is not None:
+            pair.submit(arm, joints)
+            return self.now
+        return self.transmit(joints)
+
+    def transmit(self, joints: dict[str, np.ndarray] | None = None) -> Snapshot:
         joints = joints or {}
         action = {}
         for arm in self.rig.arms:
@@ -692,6 +786,8 @@ class Driver:
                         at=tuple(at), angles=display_angles(final_pose[:3, :3]), steps=len(actions) + 2,
                         path=plan.kind, dry_run=True, notes=notes, steps_left=self.steps_left())
 
+        if self.pair is not None:
+            actions = self.pair.agree(arm, actions, q_now)
         start_actions = self.actions
         # a release on the way (see FREE_GAP_M): the width it holds; a descent with the gripper open and
         # empty (see OPEN_RAISE_LAG_M)
@@ -719,6 +815,9 @@ class Driver:
         watch_above = final_pose[2, 3] + DESCENT_M
         stall = None if contact else Stall(chain, self.command[arm], q_now)
         stop, sent = "", 0
+        # a hand that stays put holding something or keeping it still: losing it stops this arm too
+        keeper = (other_arm(arm) if self.keeper_stop and self.pair is None and self.carrying(other_arm(arm))
+                  else None)
         for q in actions:
             self.send({arm: q})
             sent += 1
@@ -728,7 +827,13 @@ class Driver:
                 stop = "slip"
             elif stall is not None and stall.step(q, self.now.arms[arm].joints) and sent < len(actions):
                 stop = "stall"
+            elif self.pair is not None and self.pair.halted and sent < len(actions):
+                stop = "partner"
+            elif keeper and self.now.arms[keeper].gripper <= DROP_READING and sent < len(actions):
+                stop = "keeper"
             if stop:
+                if self.pair is not None:
+                    self.pair.halted = True
                 break
         if stop:
             # hold where it is, so that it stops pushing into what holds it
@@ -751,6 +856,11 @@ class Driver:
             # the fingers shut, then opened a little again (R1: 2 of 196 slips): it may still be held
             notes.insert(0, f"stopped after {sent} of {len(actions)} actions: the gripper closed almost fully, as "
                          "if what it held slipped, then opened a little again - it may still hold it, loosely: look")
+        if stop == "partner":
+            notes.append(f"stopped after {sent} of {len(actions)} actions: the other arm's move stopped")
+        if stop == "keeper":
+            self._dropped(keeper)
+            notes.append(f"stopped after {sent} of {len(actions)} actions: what the {keeper} arm held slipped out")
         reading = self.now.arms[arm]
         pose = slide(reading.flange, self.rig.grasp_reach)
         err_m = float(np.linalg.norm(pose[:3, 3] - target[:3, 3]))
@@ -801,8 +911,8 @@ class Driver:
                   and self.rig.gripper.gap(reading.gripper, False) < released + FREE_GAP_M)
         if caught:
             notes.append(short_open_note(reading.gripper, pose[2, 3] <= self.rig.table_z + NEAR_TABLE_M, caught=True))
-        halt = ""
-        if not contact:
+        halt = "Dropped" if stop == "keeper" else ""
+        if not contact and not halt:
             if stop == "slip" or (dropped and watch_slip and reading.gripper <= DROP_READING):
                 halt = "Dropped"  # a slip stop always: the rest of the motion was not sent
             elif raised or caught:
@@ -1114,6 +1224,73 @@ class Driver:
             self.send(finals)
             for a in grip_arms:
                 history[a].append(self.now.arms[a].gripper)
+
+    # -- both arms at once -------------------------------------------------------------------------
+    def arms_meet(self, plans: dict[str, tuple[list, np.ndarray]]) -> str:
+        """Why these two plans, run action by action, cannot both run: "" when they can.  Arms that
+        start close (two hands on one thing) may stay that close, not come closer."""
+        left, right = plans["left"], plans["right"]
+        start = arm_gap(link_points(self.chains["left"], left[1]), link_points(self.chains["right"], right[1]))
+        limit = min(start, NEAR_ARM_M)
+        for i in range(0, max(len(left[0]), len(right[0])), 2):
+            q = {a: p[0][min(i, len(p[0]) - 1)] if p[0] else p[1] for a, p in plans.items()}
+            gap = arm_gap(link_points(self.chains["left"], q["left"]), link_points(self.chains["right"], q["right"]))
+            if gap < limit - 0.005:
+                return f"the arms would come within {100 * gap:.0f} cm of each other on the way: move them one at a time"
+        return ""
+
+    def both(self, left: dict | None, right: dict | None, *, together: bool = False,
+             things: Sequence[Solid] = ()) -> dict:
+        """Run a motion of each arm in the same actions: it costs the steps of the longer one, not their
+        sum.  A dict with a position or angles is a goto, one with only ``grip`` is a gripper call.
+        ``together``: both start and end in the same action, the shorter stretched to the longer.  A
+        refusal costs nothing and moves neither; either move stopping early stops the other."""
+        specs = {arm: dict(spec) for arm, spec in (("left", left), ("right", right)) if spec is not None}
+        if not specs:
+            raise MotionError("both() needs a motion for at least one arm")
+        grips = [arm for arm, spec in specs.items() if set(spec) == {"grip"}]
+        planned = [arm for arm in specs if arm not in grips]
+        for arm in planned:
+            check = self.goto(arm, dry_run=True, things=things, **specs[arm])
+            if not check.reached:
+                raise PairRefused(str(check))
+        pair = Pair(self, list(specs), planned, together)
+        results: dict = {}
+        errors: dict[str, BaseException] = {}
+        log, lock = self.log, threading.Lock()
+
+        def locked(event: dict) -> None:
+            with lock:
+                log(event)
+
+        def work(arm: str) -> None:
+            try:
+                results[arm] = (self.gripper(arm, specs[arm]["grip"], things) if arm in grips
+                                else self.goto(arm, things=things, **specs[arm]))
+            except BaseException as exc:  # noqa: BLE001 - raised again in the calling thread
+                errors[arm] = exc
+            finally:
+                pair.finish(arm)
+
+        threads = [threading.Thread(target=work, args=(arm,), daemon=True, name=f"both-{arm}") for arm in specs]
+        pair.arm_of = {thread: arm for thread, arm in zip(threads, specs)}
+        start = self.actions
+        self.pair, self.log = pair, locked
+        try:
+            for thread in threads:
+                thread.start()
+            pair.run()
+            for thread in threads:
+                thread.join()
+        finally:
+            self.pair, self.log = None, log
+        for exc in errors.values():
+            if isinstance(exc, EpisodeOver):
+                raise exc
+        for exc in errors.values():
+            raise exc
+        log({"kind": "both", "arms": list(specs), "together": bool(together), "steps": self.actions - start})
+        return results
 
     # -- gripper ---------------------------------------------------------------------------------
     def gripper(self, arm: str, opening, things: Sequence[Solid] = ()) -> Grip:

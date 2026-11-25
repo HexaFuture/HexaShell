@@ -49,10 +49,12 @@ import fakes_urai  # noqa: E402
 from hexashell.errors import Refused  # noqa: E402
 from hexashell.kernel.host import CallFailed, Kernel  # noqa: E402
 from hexashell.real.urai.client import UraiClient  # noqa: E402
-from hexashell.real.urai.frames import from_rpy, tcp_pose, to_rpy  # noqa: E402
-from hexashell.real.urai.host import UraiHost  # noqa: E402
+from hexashell.geometry import angle_between, log_so3  # noqa: E402
+from hexashell.real.urai.frames import C_G_P, from_rpy, hand_axes, hand_move, tcp_pose, to_rpy  # noqa: E402
+from hexashell.real.urai.host import STEP_S, UraiHost  # noqa: E402
 from hexashell.real.urai.observation import CAMERA_TO_URAI, Observation  # noqa: E402
 from hexashell.real.urai.session import UraiSession  # noqa: E402
+from hexashell.real.urai import texts  # noqa: E402
 from hexashell.robot.results import mask_items  # noqa: E402
 from hexashell.runtime.episode import Episode, Settings  # noqa: E402
 from hexashell.runtime.records import Records  # noqa: E402
@@ -608,6 +610,152 @@ def test_server_gone_fails_the_call_and_nothing_after_it(serve_robot, tmp_path):
         assert "must not run" not in failed.output
         assert session.step == 0 and execution_logs(tmp_path) == []
         assert_arms_unchanged(before, session.host.arms)
+
+
+# -- moves in the hand's own axes ------------------------------------------------------------------
+def test_hand_moves_end_where_hand_move_puts_them(serve_robot, tmp_path):
+    """hand_by and hand_turn planned and executed by URAI: each move ends where hand_move puts it from the
+    measured TCP and the orientation last asked; a hand_turn alone stays at the TCP and turns about one axis all
+    the way (URAI's line slerps from the measured orientation), at URAI's angular speed (30 degrees/s)."""
+    moves = [((0.03, 0.0, 0.0), None), (None, (30.0, 0.0, 0.0)), ((-0.02, 0.01, 0.0), (0.0, -10.0, 15.0)),
+             (None, (0.0, 0.0, -40.0))]
+    events = []
+    with serve_robot() as (url, _, service):
+        client = UraiClient(url, log=events.append)
+        host = UraiHost(client, "move the hand along its own axes", log=events.append, attach=lambda *a: None,
+                        record_state=lambda state: None)
+        try:
+            assert host.goto("left", (0.27, -0.12, 0.15), pitch=60, yaw=-110, roll=180, path="swing").ok
+            for hand_by, hand_turn in moves:
+                start = client.state()["arms"]["left"]
+                want_xyz, want_rpy = hand_move(start["xyz"], host.aim["left"], hand_by or (0.0, 0.0, 0.0),
+                                               hand_turn or (0.0, 0.0, 0.0))
+                given = {k: v for k, v in (("hand_by", hand_by), ("hand_turn", hand_turn)) if v is not None}
+                move = host.goto("left", path="line", **given)
+                assert move.ok and move.path == "line", move
+                end = host.arms["left"]
+                assert np.linalg.norm(np.subtract(end["xyz"], want_xyz)) < 0.002, (end, want_xyz)
+                assert math.degrees(angle_between(hand_axes(end["rpy_deg"]), hand_axes(want_rpy))) < 1.0
+                if hand_by is None:
+                    assert move.steps >= np.linalg.norm(hand_turn) / 30.0 / 0.04
+        finally:
+            client.close()
+    order = [event["preview_id"] for event in events if event["kind"] == "urai_execution"]
+    logs = {log["preview"]["id"]: log for log in execution_logs(tmp_path)}
+    assert len(order) == len(logs) == 1 + len(moves)
+    for (hand_by, hand_turn), preview_id in zip(moves, order[1:]):
+        planned = logs[preview_id]["preview"]["arms"]["left"]
+        if hand_by is not None:
+            continue
+        xyz, rotations = np.array(planned["xyz"]), np.array(planned["rotation_matrices"])
+        assert np.linalg.norm(xyz - xyz[0], axis=1).max() < 0.0005  # the TCP stays where it is
+        axis = np.asarray(hand_turn) / np.linalg.norm(hand_turn)
+        start = rotations[0] @ C_G_P.T
+        turned = np.array([np.degrees(log_so3(start.T @ r @ C_G_P.T)) for r in rotations])
+        along = turned @ axis
+        assert np.linalg.norm(turned - np.outer(along, axis), axis=1).max() < 0.2  # about the one axis
+        assert np.all(np.diff(along) > -1e-6) and along[-1] == pytest.approx(np.linalg.norm(hand_turn), abs=0.5)
+
+
+def test_hand_moves_in_cells(serve_robot, tmp_path):
+    with serve_robot() as (url, _, service), opened_cells(url, tmp_path / "runs") as (session, kernel, rec):
+        result = kernel.run("start = robot.goto('left', (.27, -.12, .15), pitch=60, yaw=-110, roll=180, path='swing')\n"
+                            "pushed = robot.goto('left', hand_by=(.03, 0., 0.))\n"
+                            "turned = robot.goto('left', hand_turn=(0., 0., 20.))\n"
+                            "assert start.ok and pushed.ok and turned.ok, (start, pushed, turned)\n"
+                            "print(turned)")
+        assert result.error is None, result.error
+        assert [call["name"] for call in result.calls] == ["goto"] * 3
+        assert "hand_by=(0.03, 0, 0)" in result.calls[1]["args"]
+        assert "hand_turn=(0, 0, 20)" in result.calls[2]["args"]
+        assert session.host.asked["left"] != (60.0, -110.0, 180.0)
+
+
+def plan_ends(log) -> dict:
+    """When each arm's motion ends in an executed plan (s)."""
+    return {arm: plan["time_s"][-1] for arm, plan in log["preview"]["arms"].items()}
+
+
+def test_both_arms_move_in_one_urai_plan(serve_robot, tmp_path):
+    """robot.both planned and executed by URAI: both arms in one plan and one execution on one clock (the shorter
+    motion holds); together=True ends both in the same step; arms that would meet are refused before anything
+    moves; one arm's goto with the other's gripper."""
+    events = []
+    with serve_robot() as (url, _, service):
+        client = UraiClient(url, log=events.append)
+        host = UraiHost(client, "move both arms at once", log=events.append, attach=lambda *a: None,
+                        record_state=lambda state: None)
+        try:
+            start = {arm: list(state["xyz"]) for arm, state in client.state()["arms"].items()}
+            apart = host.both(left=dict(by=(0.0, 0.0, 0.05)), right=dict(by=(0.0, 0.0, 0.10)))
+            assert apart.left.ok and apart.right.ok, apart
+            assert apart.left.steps < apart.right.steps <= apart.steps == host.step
+            for arm, rise in (("left", 0.05), ("right", 0.10)):
+                assert np.linalg.norm(np.subtract(host.arms[arm]["xyz"], np.add(start[arm], (0.0, 0.0, rise)))) < 0.002
+            together = host.both(left=dict(by=(0.0, 0.0, -0.05)), right=dict(by=(0.03, 0.0, -0.10)), together=True)
+            assert together.left.ok and together.right.ok, together
+            assert abs(together.left.steps - together.right.steps) <= 1
+            before = client.state()["arms"]
+            gap = before["left"]["xyz"][1] - before["right"]["xyz"][1]
+            with pytest.raises(CallFailed) as refused:
+                host.dispatch("both", (), dict(left=dict(by=(0.0, -gap / 2 + 0.01, 0.0)),
+                                               right=dict(by=(0.0, gap / 2 - 0.01, 0.0))))
+            assert refused.value.kind == "NotExecuted" and "would hit" in refused.value.text, refused.value.text
+            assert refused.value.text.endswith(texts.BOTH_NOT_EXECUTED)
+            assert_arms_unchanged(before, client.state()["arms"])
+            mixed = host.both(left=dict(by=(0.0, 0.0, 0.02), grip=0.5), right=dict(grip="close"))
+            assert mixed.left.ok and type(mixed.right).__name__ == "Grip" and mixed.right.goal == 0.0
+            assert client.state()["arms"]["right"]["gripper_mm"] < 1.0
+        finally:
+            client.close()
+    order = [event["preview_id"] for event in events if event["kind"] == "urai_execution"]
+    logs = {log["preview"]["id"]: log for log in execution_logs(tmp_path)}
+    assert len(order) == len(logs) == 3
+    assert all(set(logs[preview_id]["preview"]["arms"]) == {"left", "right"} for preview_id in order)
+    ends = [plan_ends(logs[preview_id]) for preview_id in order[:2]]
+    assert ends[0]["right"] - ends[0]["left"] > 0.3  # apart: the left arm held for the rest
+    assert abs(ends[1]["left"] - ends[1]["right"]) <= STEP_S  # together
+
+
+def test_together_with_a_swing_and_an_arm_that_only_turns(serve_robot, tmp_path):
+    """together=True when URAI stretches both arms on its one clock: a line slowed to a joint path (swing) of
+    the other arm ends with it; an arm that only turns, and would end first, is refused with nothing moved."""
+    events = []
+    with serve_robot() as (url, _, service):
+        client = UraiClient(url, log=events.append)
+        host = UraiHost(client, "two arms that end together", log=events.append, attach=lambda *a: None,
+                        record_state=lambda state: None)
+        try:
+            both = host.both(left=dict(xyz=(0.27, 0.05, 0.15), pitch=60, yaw=-110, roll=180, path="swing"),
+                             right=dict(by=(0.0, 0.0, 0.03)), together=True)
+            assert both.left.ok and both.right.ok and both.left.path == "swing", both
+            before = client.state()["arms"]
+            with pytest.raises(CallFailed) as refused:
+                host.dispatch("both", (), dict(left=dict(hand_turn=(5.0, 0.0, 0.0)),
+                                               right=dict(by=(0.0, 0.0, 0.08)), together=True))
+            assert refused.value.kind == "NotExecuted" and refused.value.text.startswith(
+                "together=True: the left arm, which would end first"), refused.value.text
+            assert_arms_unchanged(before, client.state()["arms"])
+        finally:
+            client.close()
+    order = [event["preview_id"] for event in events if event["kind"] == "urai_execution"]
+    logs = {log["preview"]["id"]: log for log in execution_logs(tmp_path)}
+    assert len(order) == len(logs) == 1
+    ends = plan_ends(logs[order[0]])
+    assert abs(ends["left"] - ends["right"]) <= STEP_S, ends
+    assert logs[order[0]]["preview"]["input_draft"]["arms"]["right"]["speed_m_s"] < 0.12
+
+
+def test_both_in_cells(serve_robot, tmp_path):
+    with serve_robot() as (url, _, service), opened_cells(url, tmp_path / "runs") as (session, kernel, rec):
+        result = kernel.run("both = robot.both(left=dict(by=(0, 0, .03)), right=dict(by=(0, 0, .03)), together=True)\n"
+                            "assert both.left.ok and both.right.ok, both\n"
+                            "print(both)\n"
+                            "help(robot.both)")
+        assert result.error is None, result.error
+        assert [call["name"] for call in result.calls] == ["both"]
+        assert "together=True" in result.calls[0]["args"] and "Both: " in result.output
+        assert "two hands on one thing" in result.output
 
 
 # -- frames, cameras and pictures against URAI's own geometry -------------------------------------

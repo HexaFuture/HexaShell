@@ -3,9 +3,10 @@
 # variable, e.g. HEXASHELL_MOTION=v2, HEXASHELL_SKILLS=1, HEXASHELL_MAX_TURNS=6 (booleans: 1, true,
 # yes or on). Two more are left at their defaults here: request_timeout_s (900) and script (a file of
 # cells run instead of asking the model, for offline tests; hexashell/runtime/script.py).
-# The values below are those of our RoboDojo test with skills; the test without them set only skills: false.
-# The Open tasks, which have no skills, were run with skills: false, reasoning_effort: high, max_tokens: 8192,
-# images_max: 90 and images_low: 60 (see the README).
+# The values below are those of our RoboDojo test under the Agent Track rules: skills and the score ladder off, so the
+# only task-specific text the model gets is RoboDojo's official Description and Scoring (obs["extra_info"]
+# ["detailed_instruction"], RoboDojo fbfbbcb or later).  Our earlier test with skills (not included) set skills: true,
+# ladder: true, images_max: 20 and images_low: 14 (see the README).
 policy_name: HexaShell
 protocol: ws
 host: localhost
@@ -40,10 +41,15 @@ stream: true
 # trained on conversations that kept it.  Keep it off for gpt-6-astra and other hosted models: they send
 # back only short reasoning titles, do not use them, and the gateway may refuse the extra key.
 history_reasoning: false
-# whether the task's skill note is added (skills/robodojo/<task>.md)
-skills: true
-# official scoring ladder in the task card
-ladder: true
+# whether the task's skill is added to the task card (skills/robodojo/<task>.md, if there is one; none are included);
+# the Agent Track rules allow no task-specific text besides the benchmark's own
+skills: false
+# the wiki score ladder (prompts/ladders) in the task card; off under the Agent Track rules: the card has RoboDojo's
+# official Description + Scoring instead (hexashell/runtime/card.py)
+ladder: false
+# robot.both: both arms' motions in the same actions, at the cost of the longer one (hexashell/robot/both_proxy.py;
+# help(robot) explains it, the system prompt does not); off in our reported runs
+two_hands: false
 
 # -- limits of one episode ----------------------------------------------------------------------
 max_turns: 100
@@ -52,9 +58,9 @@ nudges: 3
 # the conversation keeps at most images_max pictures and images_bytes_max bytes of them as sent (base64,
 # 4/3 of the JPEG; the gateway takes 8-10 MB per request); beyond either the oldest go, down to images_low
 # and 70% of the bytes.  The 3 start pictures stay.  With Claude the replies after a dropped picture also
-# lose their thinking: raise both (e.g. 90).
-images_max: 20
-images_low: 14
+# lose their thinking.
+images_max: 90
+images_low: 60
 images_bytes_max: 10000000
 jpeg_quality: 90
 # one cell: CPU seconds, seconds without a robot call, seconds in all

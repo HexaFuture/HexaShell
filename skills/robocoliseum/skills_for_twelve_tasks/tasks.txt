@@ -1,0 +1,13 @@
+# Tasks whose skills (robot, board, task) all come from this folder, not from skills/robocoliseum/ itself.
+hang_cups_on_cup_tree
+scrape_chicken_bone_into_bin
+take_the_scissors
+wok_flip
+stack_bowls
+cover_cup_lid
+pick_up_a_package
+drawstring_bag
+cloth_hanger
+phone_packaging
+put_the_plates_on_the_shelf
+match_and_pick_from_conveyor

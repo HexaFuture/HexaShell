@@ -15,7 +15,7 @@ import numpy as np
 
 from ..errors import Refused
 from ..kernel.host import CallFailed, Stop
-from ..motion.driver import Driver, EpisodeOver, MotionError, Solid, display_angles
+from ..motion.driver import Driver, EpisodeOver, MotionError, PairRefused, Solid, display_angles
 from ..motion.chain import slide
 from ..motion.rig import ROBODOJO, Rig
 from ..state import CAMERAS, Snapshot, parse_obs
@@ -24,10 +24,14 @@ from . import results as R
 from ..vision import overlay
 from ..vision.cameras import cameras_for, check_cam
 
-PUBLIC = ("goto", "gripper", "home", "wait", "find", "measure", "to_world", "to_pixel", "task", "state",
+PUBLIC = ("goto", "gripper", "both", "home", "wait", "find", "measure", "to_world", "to_pixel", "task", "state",
           "image", "look", "camera", "things")
 #: The calls that may close a hand on something or let go of it (see RobotHost._carry).
-MOTIONS = ("goto", "gripper", "home", "wait")
+MOTIONS = ("goto", "gripper", "both", "home", "wait")
+
+
+#: what each arm of a both() call may ask for: goto's arguments, without dry_run
+BOTH_ARGS = {"xyz", "by", "pitch", "yaw", "roll", "grip", "path", "contact", "gentle"}
 
 
 def describe_verdict(verdict: dict | None) -> str:
@@ -45,8 +49,11 @@ class RobotHost:
     def __init__(self, bridge: Bridge | None, first: Snapshot, *, scene=None,
                  log: Callable[[dict], None] | None = None,
                  attach: Callable[[str, np.ndarray, str], None] | None = None,
-                 on_step: Callable[[int, dict, dict], None] | None = None, speed=None, rig: Rig = ROBODOJO):
+                 on_step: Callable[[int, dict, dict], None] | None = None, speed=None, rig: Rig = ROBODOJO,
+                 two_hands: bool = False):
         self.bridge = bridge
+        #: robot.both and the driver's keeper stop (the setting two_hands); off by default
+        self.two_hands = two_hands
         self.snap = first
         #: per camera, the snapshot of the latest picture the model has seen (the start pictures, then
         #: robot.look's from earlier turns): to_world checks picked pixels against it
@@ -56,7 +63,7 @@ class RobotHost:
         self.attach = attach or (lambda kind, image, caption: None)
         self.on_step = on_step or (lambda seq, obs, action: None)
         self.rig = rig
-        self.driver = Driver(self, first, log=self.log, speed=speed, rig=rig)
+        self.driver = Driver(self, first, log=self.log, speed=speed, rig=rig, keeper_stop=two_hands)
         self.scene = scene
         self.verdict: dict | None = None
         #: the perception told when a hand closes on something and lets go (see _carry), if any
@@ -99,7 +106,7 @@ class RobotHost:
     def dispatch(self, name: str, args: tuple, kwargs: dict) -> Any:
         if self.over():
             raise Stop(self.over_reason())
-        if name not in PUBLIC:
+        if name not in PUBLIC or (name == "both" and not self.two_hands):
             raise CallFailed("RobotError", f"robot has no '{name}'")
         method = getattr(self, "_" + name)
         start_step, start_actions = self.snap.step, self.driver.actions
@@ -175,6 +182,40 @@ class RobotHost:
         if grip.halt == "Blocked":
             raise CallFailed("Blocked", f"{grip}\nthe rest of the cell was skipped so you can look")
         return grip
+
+    def _both(self, left=None, right=None, *, together=False):
+        if not self.two_hands:
+            raise Refused("both() is not available: move one arm at a time with goto")
+        specs = {}
+        for arm, spec in (("left", left), ("right", right)):
+            if spec is None:
+                continue
+            if not isinstance(spec, dict):
+                raise Refused(f"both(): {arm} is a dict of goto's arguments, e.g. dict(by=(0, 0, 0.1)) or dict(grip='close')")
+            unknown = set(spec) - BOTH_ARGS
+            if unknown:
+                raise Refused(f"both(): {arm} has no {sorted(unknown)}; it takes {sorted(BOTH_ARGS)}")
+            spec = dict(spec)
+            if spec.get("xyz") is not None:
+                spec["xyz"] = point_of(spec["xyz"])
+            for key in ("pitch", "yaw", "roll"):
+                if key in spec:
+                    spec[key] = _num(spec[key], key)
+            specs[arm] = spec
+        start = self.driver.actions
+        try:
+            done = self.driver.both(specs.get("left"), specs.get("right"), together=bool(together),
+                                    things=self._solids())
+        except PairRefused as exc:
+            raise CallFailed("NotExecuted", f"{exc}\nnothing moved") from None
+        result = R.Both(left=done.get("left"), right=done.get("right"), steps=self.driver.actions - start,
+                        steps_left=self.snap.steps_left)
+        halts = [m.halt for m in done.values() if m.halt]
+        if "Dropped" in halts:
+            raise CallFailed("Dropped", f"{result}\nboth arms stopped; the rest of the cell was skipped - look where it went")
+        if halts:
+            raise CallFailed("Blocked", f"{result}\nboth arms stopped; the rest of the cell was skipped so you can look")
+        return result
 
     def _home(self, arm="both"):
         return self.driver.home(arm)

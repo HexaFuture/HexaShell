@@ -1,10 +1,13 @@
 """The system prompt and the task card the model starts from.
 
 The system prompt is ``prompts/<bench>/*.md`` in file-name order (``<part>.<variant>.md`` in place of
-``<part>.md`` in an episode of that variant, as RoboTwin 2.0's ``rgb`` without depth).  The task card is built from
-the first observation: instruction, step budget, the start pose of both arms (the pose the
-evaluator calls "origin"), the three start pictures, and - when enabled - the task's score ladder
-(``prompts/ladders``) and its skill note (``skills/robodojo/<task>.md``).
+``<part>.md`` in an episode of that variant, as RoboTwin 2.0's ``rgb`` without depth).  The task card is built
+from the first observation: the instruction, RoboDojo's official task text (``obs["extra_info"]
+["detailed_instruction"]``: Description and public Scoring, verbatim), the step budget, the start pose
+of both arms, and the three start pictures.  Under RoboDojo's Agent Track rules the official text is the
+only task-specific text in the card: the task's name is not shown, and the two optional additions - the
+wiki score ladder (``prompts/ladders``, ``ladder``) and the task's skill note (``skills/robodojo/<task>.md``
+if there is one, ``skills``; none are included) - are off by default and not allowed in an official run.
 """
 
 from __future__ import annotations
@@ -82,15 +85,16 @@ def skill(task: str | None) -> str | None:
 
 def task_card(first: Snapshot, *, with_ladder: bool, with_skill: bool) -> tuple[str, dict]:
     """The card's text and what went into it (for the record)."""
-    task = first.info.get("task_name")
+    task = first.info.get("task_name")  # for the record and the two optional additions; never shown
     lines = ["# Task card", "",
              f"Instruction (from the benchmark; it is authoritative): {first.instruction!r}"]
-    if task:
-        lines.append(f"Task: {task}")
+    official = first.detailed_instruction
+    if official:
+        lines += ["", "The benchmark's official description of this task, verbatim:", "", official.strip(), ""]
     if first.step_limit is not None:
         lines.append(f"Step budget: {first.step_limit} steps for the whole episode "
                      f"(used so far: {first.step or 0}).")
-    lines.append("Start pose of each arm (the evaluator's \"origin\"; robot.home() returns to it):")
+    lines.append("Start pose of each arm (its initial pose; robot.home() returns to it):")
     for arm in ARMS:
         reading = first.arms[arm]
         pose = slide(reading.flange, GRASP_REACH)
@@ -100,7 +104,7 @@ def task_card(first: Snapshot, *, with_ladder: bool, with_skill: bool) -> tuple[
                      f"gripper {reading.gripper:.2f}")
     shown = [c for c in CAMERAS if c in first.images]
     lines.append(f"Pictures 1-{len(shown)} below: {', '.join(shown)} at the start; they stay in the conversation.")
-    used = {"task": task, "ladder": False, "skill": False}
+    used = {"task": task, "detailed_instruction": bool(official), "ladder": False, "skill": False}
     if with_ladder:
         text = ladder(task)
         if text:

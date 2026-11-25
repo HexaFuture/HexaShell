@@ -76,7 +76,11 @@ class Settings:
     thinking_display: str = "summarized"
     max_tokens: int = 8192
     skills: bool = False
-    ladder: bool = True
+    #: RoboDojo only: the wiki score ladder (prompts/ladders) in the task card.  Off under the Agent Track rules:
+    #: the card has RoboDojo's official task text instead (card.py)
+    ladder: bool = False
+    #: RoboDojo only: robot.both, both arms' motions in the same actions (robot/both_proxy.py)
+    two_hands: bool = False
     max_turns: int = 100
     budget_s: float = 5400.0
     nudges: int = 3
@@ -327,6 +331,10 @@ class Episode:
         if result.restarted:
             status.append("the Python session was restarted")
         text += "\n— " + " · ".join(x for x in status if x)
+        note = session.cell_note()
+        if note:
+            text += "\n" + note
+            self.rec.event({"kind": "cell_note", "cell": number, "text": note})
         if result.stopped or session.over:
             text += "\n" + self._over_text()
         self.rec.cell(number, code, {"output": result.output, "error": result.error, "stopped": result.stopped,

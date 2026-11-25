@@ -148,3 +148,8 @@ class Session:
     def timing_note(self) -> str:
         """The task card's last words, after the replies and minutes the episode has."""
         return "the simulation stands still while you think."
+
+    def cell_note(self) -> str | None:
+        """A line after a cell's status line when the benchmark has news for the model (LIBERO-Pro 2.0: the
+        instruction changed); None: nothing to say."""
+        return None

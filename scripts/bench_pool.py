@@ -75,7 +75,7 @@ START_LIMIT = 3600.0
 #: how long a GPU's check may take (s); one that takes longer finds the GPU unfit
 CHECK_LIMIT = 180.0
 #: the benchmarks whose environment can check a GPU (MuJoCo with PyOpenGL), in the order tried
-CHECKERS = ("libero", "robocasa")
+CHECKERS = ("libero", "robocasa", "dexjoco_x")
 #: outcomes after which the slot's server is started again (a retry gets a fresh one)
 SUSPECT = ("simulator failed", "error", "no record", "no result.json", "unreadable result.json")
 
@@ -151,9 +151,10 @@ class Pool:
         except OSError:
             return self.max_running
 
-    def outcome(self, task: str, seed: str, since: float) -> str:
+    def outcome(self, bench: str, task: str, seed: str, since: float) -> str:
         """"ok", or why the episode should be played again: its newest record since the launch."""
-        recs = sorted(p for p in self.results.glob(f"{task}_s{seed}-*") if p.is_dir() and p.stat().st_mtime >= since)
+        recs = sorted(p for p in self.results.glob(f"{record_name(bench, task, seed)}-*")
+                      if p.is_dir() and p.stat().st_mtime >= since)
         if not recs:
             return "no record"
         result = recs[-1] / "result.json"
@@ -295,7 +296,7 @@ class Pool:
         if code is None:
             return
         bench, task, seed, attempt = parse(ep["line"])
-        why = self.outcome(task, seed, ep["since"])
+        why = self.outcome(bench, task, seed, ep["since"])
         self.note(f"exit {ep['tag']} gpu={slot['gpu']} code={code} after {time.time() - ep['since']:.0f}s: {why}")
         key = (bench, task, seed)
         line, by_gateway = relist(why, bench, task, seed, attempt, self.gateway_relists.get(key, 0))
@@ -423,6 +424,15 @@ class Pool:
             except OSError:
                 pass
         self.note(f"end {self.name}")
+
+
+def record_name(bench: str, task: str, seed: str) -> str:
+    """The name of an episode's record folder before its time stamp (its session's record_name)."""
+    if bench == "liberopro2":
+        from hexashell.benches.liberopro2 import protocol as LP2
+
+        return LP2.record_name(task, int(seed))
+    return f"{task}_s{seed}"
 
 
 def episode_cmd(python: str, bench: str, task: str, seed: str, out: str, gpu: str, sock: str,

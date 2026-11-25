@@ -27,6 +27,8 @@ class UraiSession(Session):
     bench = "urai"
     proxy = "hexashell.real.urai.proxy"
     deadline_budgets = 1
+    host_class = UraiHost
+    texts = texts
 
     def __init__(self, url: str, instruction: str, *, task_name: str = "task", token: str | None = None,
                  step_limit: int | None = None, speed_m_s: float = 0.12):
@@ -39,13 +41,13 @@ class UraiSession(Session):
         self.host: UraiHost | None = None
 
     def record_name(self) -> str:
-        return f"urai-{self.info['task_name']}"
+        return f"{self.bench}-{self.info['task_name']}"
 
     # -- lifetime ------------------------------------------------------------------------------
     def open(self, settings, rec, attach: Attach) -> None:
         self.rec = rec
         self.client = UraiClient(self.url, self.token, log=rec.event)
-        self.host = UraiHost(self.client, self.instruction, task_name=self.info["task_name"],
+        self.host = self.host_class(self.client, self.instruction, task_name=self.info["task_name"],
                              step_limit=self.step_limit, speed_m_s=self.speed_m_s,
                              log=rec.event, attach=attach, record_state=rec.state)
         rec.state({"step": 0, "arms": self.host.arms})
@@ -71,7 +73,7 @@ class UraiSession(Session):
 
     def card(self, settings) -> tuple[str, dict]:
         model = self.host.model
-        card = texts.CARD.format(instruction=self.instruction, name=model["name"],
+        card = self.texts.CARD.format(instruction=self.instruction, name=model["name"],
                                  model=json.dumps(model, ensure_ascii=False), task=self.host.task())
         return card, {"task": self.info["task_name"], "skill": False}
 
@@ -98,7 +100,7 @@ class UraiSession(Session):
             return {}
 
     def over_text(self) -> str:
-        return texts.OVER.format(step=self.step, limit=self.step_limit)
+        return self.texts.OVER.format(step=self.step, limit=self.step_limit)
 
     def report(self, finish: dict | None) -> dict[str, Any]:
         return {"agent_report": finish, "evaluation": {"source": "none"}, "success": None}
@@ -107,29 +109,31 @@ class UraiSession(Session):
     def tools(self) -> list[dict]:
         tools = copy.deepcopy(super().tools())
         finish = next(t["function"] for t in tools if t["function"]["name"] == "finish")
-        finish["description"] = texts.FINISH
+        finish["description"] = self.texts.FINISH
         status = finish["parameters"]["properties"]["status"]
         status["enum"] = ["done", *status["enum"]]
-        status["description"] = texts.FINISH_STATUS
+        status["description"] = self.texts.FINISH_STATUS
         finish["parameters"]["properties"]["summary"]["description"] = (
             "Report in English what was achieved, what was verified, and what remains incomplete or uncertain.")
         return tools
 
     def nudge_text(self) -> str:
-        return texts.NUDGE
+        return self.texts.NUDGE
 
     def finished_text(self) -> str:
-        return texts.FINISHED
+        return self.texts.FINISHED
 
     def timing_note(self) -> str:
-        return texts.TIMING
+        return self.texts.TIMING
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, prog: str = "python -m hexashell.real.urai", service: str = "URAI",
+         env: str = "URAI", session_class: type[UraiSession] = UraiSession) -> int:
     from ...runtime.episode import Episode, Settings
 
-    ap = argparse.ArgumentParser(prog="python -m hexashell.real.urai", description="Run a HexaShell session through URAI HTTP")
-    ap.add_argument("--url", default=os.environ.get("URAI_URL"), help="URAI service URL; can also be set with URAI_URL")
+    ap = argparse.ArgumentParser(prog=prog, description=f"Run a HexaShell session through {service} HTTP")
+    ap.add_argument("--url", default=os.environ.get(f"{env}_URL"),
+                    help=f"{service} service URL; can also be set with {env}_URL")
     ap.add_argument("--task", required=True, help="Task instruction; use English for English records")
     ap.add_argument("--name", default="task", help="Task name used in records")
     ap.add_argument("--script", default="", help="Python script with cells separated by # %%%%; omit to use the model")
@@ -139,12 +143,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--speed", type=float, default=0.12, help="Planning speed for goto/home in metres per second")
     args = ap.parse_args(argv)
     if not args.url:
-        ap.error("Provide the URAI service URL with --url or URAI_URL")
+        ap.error(f"Provide the {service} service URL with --url or {env}_URL")
     config = json.loads(Path(args.config).read_text()) if args.config else {}
     if args.script:
         config["script"] = args.script
     settings = Settings.from_config(config)
-    session = UraiSession(args.url, args.task, task_name=args.name, token=os.environ.get("URAI_TOKEN"),
+    session = session_class(args.url, args.task, task_name=args.name, token=os.environ.get(f"{env}_TOKEN"),
                           step_limit=args.step_limit, speed_m_s=args.speed)
     episode = Episode(session, settings, Path(args.results))
     episode.run()

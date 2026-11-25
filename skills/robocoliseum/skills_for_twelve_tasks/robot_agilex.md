@@ -1,0 +1,24 @@
+- Pitch 90 went with the grasp point below the shoulders' height (the card gives it): there, on the
+  hand's own side and within 40 cm in front of the shoulders, 630 of 674 such poses went; 3 cm or
+  more above that height 0 of 109 (lifts of 11-19 cm, hovers 10 cm over a low handle, the tree,
+  the paper in write), 8 cm or more across the middle 32 of 107 (all six tasks, L0-L15, V1-V16).
+- So over a low part stop 5.5-9 cm above it, then go straight down: picks held 6/6 (keycap V1-V16
+  t3-t4; pour V1 t4-t5, V16 t3-t5). One move from afar to the grasp pose knocked a handle over or
+  stopped 1.2 cm high on the bar and closed wide (keycap L10 t3, L15 t4; pour V6 t4). Lift 7-10
+  cm; where a lift was refused, the offered lower point or pitch 70 went (hang V1, V6, V11, 5/5;
+  trash L0 t7, L15 t17; scrape V6 t7 without notes).
+- Wrist turns are slow, and some offers hide them: a roll-90 offer ("fingers close along about the
+  same line") ran as a full wrist roll in 110-114 steps, against 56-72 for roll 0, and both such
+  carries lost the ball (trash V1, V16); a dry run offered roll 180 in 108 steps where roll=0 went
+  by line in 17 (hang V16 t10-t11). Line moves that turned the wrist far took 90-111 steps (keycap
+  L5 t8, L10 t25, t33, t35), held-tool yaw turns of 90-145 degrees 106-176 and held 4/4 (scrape
+  V11, V16, V6 and V16 without notes). Ask roll=0 first and read each dry run's steps.
+- Holds read 1.2-2.8 cm on handles and bars 1-2 cm thick (keycap V1-V16, hang L0-L15, V16, pour V1,
+  V16, scrape V11, V16). Closes of 2.6-5.8 cm had the part crooked, on one finger or by its edge,
+  and "Dropped" or a turn followed (hang L5, L10, V1, V6, V11; scrape V1, V6; pour L5-L15, V6 t4):
+  open and grasp again before lifting (hang L0, L10, L15 r4 went on at 3.1-3.9 and lost the cup in
+  the carry).
+- The head picture's lowest row meets the table about 18 cm in front of the shoulders (scrape L15
+  t6, V16 t1; hang L0 t6): a bone 5-9 cm from the table's near edge was in no head picture (scrape
+  V6, V16), and the floor in front of the table showed only to a wrist pointing down 15-20 cm
+  above the table's near part (scrape L5 t9-t12, L10 t13-t14, V16 t9).

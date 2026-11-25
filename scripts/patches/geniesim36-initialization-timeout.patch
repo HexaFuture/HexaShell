@@ -1,0 +1,13 @@
+--- a/source/geniesim_benchmark/src/geniesim_benchmark/app/controllers/api_core.py
++++ b/source/geniesim_benchmark/src/geniesim_benchmark/app/controllers/api_core.py
+@@ -70,7 +70,9 @@
+ # Scene startup includes the first render's queue wait and robot initialization.
+ # The full living room takes ~193 s with concurrent visible Kit sessions.
+ # This startup-only budget includes render queue wait; action deadlines are unchanged.
+-_ROBOT_INITIALIZATION_TIMEOUT_SECONDS = 300.0
++# Local change (HexaShell): GENIESIM_ROBOT_INITIALIZATION_TIMEOUT_SECONDS overrides the 300 s
++# default. The first Isaac task on a machine builds the Kit cache during this step and needs longer.
++_ROBOT_INITIALIZATION_TIMEOUT_SECONDS = float(os.environ.get("GENIESIM_ROBOT_INITIALIZATION_TIMEOUT_SECONDS", "300.0"))
+ 
+ 
+ class APICore:

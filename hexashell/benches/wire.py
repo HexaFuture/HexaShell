@@ -60,7 +60,7 @@ def encode(payload: Any) -> bytes:
         raise WireError(f"{type(value).__name__} cannot be sent")
 
     body = plain(payload)
-    header = json.dumps({"body": body, "blobs": [meta | {"nbytes": len(data)} for meta, data in blobs]},
+    header = json.dumps({"body": body, "blobs": [{**meta, "nbytes": len(data)} for meta, data in blobs]},
                         allow_nan=True, separators=(",", ":")).encode("utf-8")
     return b"".join([struct.pack(">Q", len(header)), header] + [data for _, data in blobs])
 

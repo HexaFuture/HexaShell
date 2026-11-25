@@ -19,6 +19,7 @@ CARD = ("# Task card\n\n{instruction}\n\nRobot: {name}. World frame, TCP, bases,
 OVER = "Session over: action budget {step}/{limit}; the task result has not been evaluated."
 TIMING = ("The URAI backend runs on wall-clock time and does not pause while you think. Action steps come from the "
           "actual server-side execution time, 0.04 s per step.")
+CANCELLED = "URAI execution cancelled"
 #: a robot call once the budget is spent
 BUDGET = "The action budget is used up: {step}/{limit}"
 #: goto(path="auto"): the joint-space path URAI planned after the straight line failed
@@ -26,3 +27,9 @@ SWING_REFUSED = ("The joint path leaves the straight line by {off:.1f} mm and di
                  'an intermediate point or an explicit path="swing"')
 SWING_USED = "Using the joint path: {off:.1f} mm off the straight line, {dip:.1f} mm below the ends"
 CONTACT = "contact=True adds no harness stall check; URAI's own collision and tracking checks still apply"
+#: both(): after the refusal of either arm or of the pair (RoboDojo's words)
+BOTH_NOT_EXECUTED = "nothing moved"
+#: both(together=True): the arm that would end first could not be slowed to end with the other
+TOGETHER_REFUSED = ("together=True: the {arm} arm, which would end first, could not be slowed to end with the other "
+                    "({gap:.2f} s apart; a turn or URAI's joint limits set its pace); nothing moved. Leave out together, "
+                    "or give the two arms motions of a similar length")

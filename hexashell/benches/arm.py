@@ -32,8 +32,9 @@ A push (:meth:`Arm.push_arc`) follows no plan: in short cycles, each holding a g
 the hand, it presses a hinged part around its hinge, the hand turning with the part as far as the hand's
 own track shows it turned (PRESS_CHUNK).
 
-The gripper's sign action moves a level from -1 (open) to +1 (closed) by 0.2 per step; the opening
-asked for is a level, held while other things move.
+The gripper's sign action moves a level from -1 (open) to +1 (closed) by 0.2 per step (robosuite 1.5's; a
+benchmark's arm sets its own, :attr:`Arm.grip_step`); the opening asked for is a level, held while other
+things move.
 """
 
 from __future__ import annotations
@@ -430,6 +431,8 @@ class Arm:
     stall_steps = STALL_STEPS
     #: whether settling also waits for the hand to rest (REST) once it is within settle_tol
     settle_rest = True
+    #: how far the gripper's level moves in a step: the levels an opening is rounded to
+    grip_step = GRIP_STEP
 
     def __init__(self, sim, osc, gripper_model, log=None):
         self.sim = sim
@@ -892,9 +895,9 @@ class Arm:
 
     # -- gripper ---------------------------------------------------------------------------------
     def set_grip(self, opening: float) -> None:
-        """Start moving the gripper to ``opening`` (0 closed .. 1 open), in steps of 0.1."""
+        """Start moving the gripper to ``opening`` (0 closed .. 1 open), in steps of half ``grip_step``."""
         level = 1.0 - 2.0 * float(np.clip(opening, 0.0, 1.0))
-        self.grip_goal = float(np.clip(round(level / GRIP_STEP) * GRIP_STEP, -1.0, 1.0))
+        self.grip_goal = float(np.clip(round(level / self.grip_step) * self.grip_step, -1.0, 1.0))
 
     def grip(self, opening: float) -> dict:
         """Move the gripper to ``opening`` and wait until the fingers stop."""

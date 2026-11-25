@@ -215,7 +215,10 @@ class ArmServer:
         tool = np.asarray(pose, float)
         verdict = self._stretched_now() or (self._check(tool) if check else {"ok": True})
         if not verdict["ok"] and "progress" in verdict and not verdict.get("stretched") and self._from_home(tool):
-            verdict.update(from_home=True, why=verdict["why"].removesuffix(self.reach_where) + self.home_where)
+            why = verdict["why"]  # (no str.removesuffix: the servers run Python 3.8 too)
+            if self.reach_where and why.endswith(self.reach_where):
+                why = why[:len(why) - len(self.reach_where)]
+            verdict.update(from_home=True, why=why + self.home_where)
         path, start = None, None
         if verdict["ok"]:
             _, start = self.robot.site_now()

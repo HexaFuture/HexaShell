@@ -12,10 +12,12 @@
 # runner launched and that still run.
 # An episode that never started (no record folder: a simulator crash at boot; stuck on an error dialog) or
 # that the model gateway cut short (its record ends with "gateway_error") is listed again, up to ATTEMPTS
-# times.  A layout RoboDojo drops as PhysX-unstable is replaced by layout + SHIFT (never 10..19: the test
-# layouts).  The policy needs no GPU.  A RoboDojo simulator shows nothing on its GPU for a minute or so after
-# its launch and then grows to 7-9.5 GB, so every RoboDojo episode on the machine, anyone's, counts from its
-# launch on (a scripts/robodojo.sh eval process with its --env-gpu, or a src/eval_client/main.py with its
+# times.  A layout RoboDojo drops as PhysX-unstable is replaced by the first layout from layout + SHIFT on that
+# the task has for that seed (counting on from 0 past the last one), that is not 10..19 (the test layouts) and
+# that this batch has neither listed nor launched; with none left, by nothing.  The policy needs no GPU.
+# A RoboDojo simulator shows nothing on its GPU for a minute or so after its launch and then grows to 7-9.5 GB,
+# so every RoboDojo episode on the machine, anyone's, counts from its launch on (a scripts/robodojo.sh eval
+# process with its --env-gpu, or a src/eval_client/main.py with its
 # --device_id) as holding what its simulator shows or SIM, whichever is more; any other python process on a GPU
 # younger than RAMP seconds as holding OTHER_FULL until it shows more.  A GPU gets a launch when NEED is left
 # after that: two simulators on a 24 GB card, also beside a 3 GB SAM3.  The runners of every user and checkout on
@@ -134,6 +136,19 @@ record() {  # the policy's record folder of a running or finished episode (newes
         2>/dev/null | sort | tail -n 1
 }
 
+replacement() {   # the layout to run instead of an unstable one (see the top); nothing when none is left
+    local task=$1 seed=$2 layout=$3 n k c
+    local -A used=([$layout]=1)
+    n=$(ls "Assets/Eval_Layout/RoboDojo/arx_x5/$seed" 2>/dev/null | grep -cE "^${task}_[0-9]+\.json$")
+    while read -r c; do used[$c]=1; done < <(
+        awk -v t="$task" -v s="$seed" '$1 == t && $2 == s {print $3}' "$todo"
+        grep -aoE " launch ${task}_s${seed}_l[0-9]+" "$events" | sed 's/.*_l//')
+    for (( k = 0; k < n; k++ )); do
+        c=$(( (layout + SHIFT + k) % n ))
+        (( c >= 10 && c <= 19 )) || [ -n "${used[$c]:-}" ] || { echo "$c"; return 0; }
+    done
+}
+
 retry() {   # after an episode's simulator exits: list it again when no episode was played, or the gateway failed
     local task seed layout attempt lg=$2 since=$3 rec dir
     read -r task seed layout attempt <<<"$1"; attempt=${attempt:-1}
@@ -142,8 +157,9 @@ retry() {   # after an episode's simulator exits: list it again when no episode 
     dir=$(find "$HEXASHELL_RESULT_DIR" -maxdepth 1 -type d -name "${task}_s${seed}_l${layout}-*" \
         -newermt "@$since" 2>/dev/null | head -n 1)
     if grep -aq "Unstable nums: 1" "$lg"; then
-        local next=$((layout + SHIFT)); (( next >= 10 && next <= 19 )) && next=$((next + 10))
-        add "$task $seed $next 1"; note "unstable $task s$seed l$layout -> layout $next"
+        local next; next=$(replacement "$task" "$seed" "$layout")
+        if [ -n "$next" ]; then add "$task $seed $next 1"; note "unstable $task s$seed l$layout -> layout $next"
+        else note "unstable $task s$seed l$layout: every other layout listed or launched already, none instead"; fi
     elif [ -z "$dir" ] || grep -aq -e "status boot_error" -e "Success nums: 0, Fail nums: 0, Unstable nums: 0" \
         -e "^\[batch\] stuck" "$lg"; then
         again "$task $seed $layout $attempt" "no episode"

@@ -26,29 +26,21 @@ When something fails:
   steps the rest of the task needs. Put back anything that was moved by accident if it matters
   for the task.
 
-How strict the benchmark is:
-- Positions are checked to about a centimetre or two, and angles to some degrees, against the
-  instruction's words: "in", "on", "next to", "aligned", "in order" each mean a measurable
-  arrangement. Every object the instruction names counts, and objects it does not name are best
-  left where they are.
-- The score table also shows whether the way of doing it is checked. Where its rows name only
-  where things must end up, a way that is slow or keeps failing can give way to a surer one (such
-  as carrying the objects one by one instead of moving them with a tool); where a row checks the
-  way (an object that must not be lifted, a number of presses), keep to exactly what it checks.
-- Containers, fixtures and stacks must stay upright and in place.
-- After a pour, the container usually needs to be turned back upright. Before that it should be
-  close to empty, with what left it inside the target (not splashed or spilled). Some liquid in
-  the target does not make it done.
-- After the task's arrangement is made, both arms go home with open grippers when the score
-  table's top row asks for a return to origin (section 1). If the episode is still running after
-  that, something does not match yet: compare carefully, fix, home again where needed.
+Doing what the task asks:
+- Make each arrangement the instruction and the description name as exactly as you can: "in",
+  "on", "next to", "aligned", "in order" each mean a precise arrangement - check it closely in the
+  pictures. Every object they name matters; leave objects they do not name where they are.
+- Keep containers, fixtures and stacks upright and in place.
+- After the task's arrangement is made, both arms go home with open grippers when the description
+  asks for it (section 1). If the episode is still running after that, something does not match
+  yet: compare carefully, fix, home again where needed.
 
 Budget:
 - Before each phase, compare the steps it needs with the steps left. A pick and place takes about
-  60-80 steps, more with careful checks. When the score table's top row asks for a return to
-  origin, keep about 40 for the final release and `home`; otherwise no final `home` is needed.
-- When the budget is nearly gone, secure what partial credit the score table gives rather than
-  starting something that cannot be finished.
+  60-80 steps, more with careful checks. When the description asks for a return to the initial
+  poses, keep about 40 for the final release and `home`; otherwise no final `home` is needed.
+- When the budget is nearly gone, secure what partial credit the description's Scoring gives
+  rather than starting something that cannot be finished.
 
 Pictures:
 - The conversation keeps the three start pictures and the most recent others (at most 20 in all);

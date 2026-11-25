@@ -33,7 +33,7 @@ from ..motion.pose import rotation_of
 from ..motion.rig import ROBODOJO
 from ..robot.results import Mask, MaskList, Spot, Thing
 from ..state import CAMERAS, ArmReading, Snapshot
-from ..world import ARM_BASES, ARMS, GRASP_REACH, TABLE_Z
+from ..world import ARM_BASES, GRASP_REACH, TABLE_Z
 from . import hull
 from .cameras import HEIGHT, WIDTH, WRIST_FOCAL, WRIST_MOUNT, Camera, cameras_for, check_cam, wrist_pose
 from .depth import level_depth
@@ -353,6 +353,10 @@ class _Record:
 class Scene:
     #: SAM3's words for the bare table top (see TABLE_WORDS)
     table_words = TABLE_WORDS
+    #: the camera that sees the whole table, and the order measurements try the cameras in (a robot with
+    #: other cameras or arms names them in a subclass: :meth:`wrist_of`, :meth:`arm_words`)
+    head = "head"
+    order = ORDER
 
     def __init__(self, url: str, *, log: Callable[[dict], None] | None = None, client: Sam3Client | None = None):
         self.log = log or (lambda event: None)
@@ -369,16 +373,76 @@ class Scene:
         self.next_mask = 1
         self.next_thing = 1
         self.records: dict[int, _Record] = {}
-        # per hand: Thing id -> the grasp pose its record's solid goes with (see grasped)
-        self.carried: dict[str, dict[int, np.ndarray]] = {arm: {} for arm in ARMS}
-        self._chains: dict[str, object] = {}
-        self._pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="sam3")
         #: the arms and the table (the host's motion rig, once bound)
         self.rig = ROBODOJO
+        # per hand: Thing id -> the grasp pose its record's solid goes with (see grasped)
+        self.carried: dict[str, dict[int, np.ndarray]] = {arm: {} for arm in self.rig.arms}
+        self._chains: dict[str, object] = {}
+        self._pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="sam3")
 
     def bind(self, host) -> None:
         self.host = host
         self.rig = getattr(host, "rig", None) or self.rig
+        self.carried = {arm: self.carried.get(arm, {}) for arm in self.rig.arms}
+
+    # -- the robot's names (RoboDojo's; a subclass for another robot gives its own) ---------------------
+    def wrist_of(self, arm: str) -> str:
+        """The camera on that arm's hand."""
+        return f"{arm}_wrist"
+
+    def arm_words(self, arm: str) -> str:
+        """The arm as the messages name it after 'the'."""
+        return f"{arm} arm"
+
+    def arms_words(self, arms) -> str:
+        """Several arms as the messages name them after 'the'."""
+        return f"{' and '.join(arms)} arm{'s' if len(arms) > 1 else ''}"
+
+    def gripper_words(self, arm: str) -> str:
+        return f"{arm} gripper"
+
+    def wrist_words(self, arm: str) -> str:
+        """That arm's wrist camera as the messages name it after 'the'."""
+        return f"{arm} wrist camera"
+
+    def held_words(self, arm: str) -> str:
+        """A Thing's ``on`` while that hand holds it."""
+        return f"held by {arm}"
+
+    def check_cam(self, cam) -> str:
+        return check_cam(cam)
+
+    def side_words(self, normal) -> str:
+        """The name of the world direction nearest an outward xy direction."""
+        return _side(normal)
+
+    def grip_yaw(self, shape: hull.Shape) -> float | None:
+        """The yaw at which down-pointing fingers close across the object's short side, in the robot's
+        own convention (RoboDojo's: at yaw 0 they close along world x)."""
+        return shape.grip_yaw
+
+    def _covering(self, arm: str, cam: str, what: str) -> str:
+        """'the left arm covers <what> in the head picture' (the gripper, in its own wrist camera's)."""
+        if cam == self.wrist_of(arm):
+            return f"the {self.gripper_words(arm)} covers {what} in its own {cam} picture"
+        return f"the {self.arm_words(arm)} covers {what} in the {cam} picture"
+
+    def _cams(self, cams) -> list[str]:
+        if cams is None or cams in ("auto", "all"):
+            return list(self.order)
+        names = [cams] if isinstance(cams, str) else list(cams)
+        out: list[str] = []
+        for c in names:
+            name = self.check_cam(c)
+            if name not in out:
+                out.append(name)
+        if not out:
+            raise Refused("measure: cams is 'auto' or a list of camera names")
+        return out
+
+    def look_command(self, arm: str, point, got) -> str:
+        """The call that takes the hand to a pose from :meth:`_look_pose`."""
+        return f"robot.goto('{arm}', ({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f}), {self._look_angles(got)})"
 
     def close(self) -> None:
         self._pool.shutdown(wait=False)
@@ -390,8 +454,8 @@ class Scene:
         snap = self.host.snap
         if self._views is None or self._views[0] != snap.seq:
             views = self._pictures(snap)
-            for arm in ARMS:
-                view = views.get(f"{arm}_wrist")
+            for arm in self.rig.arms:
+                view = views.get(self.wrist_of(arm))
                 if view is not None and self._holding(arm):
                     view.outline_held = lambda v, arm=arm: self._held_region(arm, v)
             self._views = (snap.seq, views)
@@ -446,7 +510,8 @@ class Scene:
         if driver is None:
             return None
         arms = snap.arms_in_pictures
-        out = {arm: min(1.0, float(arms[arm].gripper) + SQUEEZE_LAG) for arm in ARMS if driver.squeezing(arm)}
+        out = {arm: min(1.0, float(arms[arm].gripper) + SQUEEZE_LAG) for arm in self.rig.arms
+               if driver.squeezing(arm)}
         return out or None
 
     # -- outlines ----------------------------------------------------------------------------------
@@ -518,7 +583,7 @@ class Scene:
 
     # -- measuring ---------------------------------------------------------------------------------
     def measure(self, target, *, cams="auto") -> Thing:
-        allowed = _cams(cams)
+        allowed = self._cams(cams)
         t0 = time.monotonic()
         if isinstance(target, Thing):
             thing = self._again(target, allowed)
@@ -597,7 +662,7 @@ class Scene:
             mask, view = self.mask_and_view(target)
             return _Target(mask, view, mask.label, text=mask.prompt.get("text"), click=_clicked(mask.prompt))
         if isinstance(target, (tuple, list)) and len(target) == 2 and isinstance(target[0], str):
-            return self._by_pixel(check_cam(target[0]), target[1])
+            return self._by_pixel(self.check_cam(target[0]), target[1])
         if isinstance(target, (tuple, list)) and target and all(isinstance(m, Mask) for m in target):
             pairs = [self.mask_and_view(m) for m in target]
             cams = [m.cam for m, _ in pairs]
@@ -635,7 +700,7 @@ class Scene:
                          notes=["the words find by appearance: name how it looks (colour, shape), or point "
                                 "at it with robot.find(cam, at=(x, y))"])
         # the head sees the whole table: start there when it shows the object
-        cam = cams[0] if cams[0] == "head" else max(cams, key=lambda c: instances[c][0][1])
+        cam = cams[0] if cams[0] == self.head else max(cams, key=lambda c: instances[c][0][1])
         view = views[cam]
         masks = [self.register(view, m, text, s, {"text": text}) for m, s in instances[cam]]
         pick = 0
@@ -711,10 +776,10 @@ class Scene:
         if area < MIN_PIXELS:
             return self._missing(target, prior, f"Mask#{target.mask.id} is too small to measure"), None, []
         if view.held is not None and np.count_nonzero(first_mask & view.held) >= ON_ROBOT * area:
-            arm = view.cam.removesuffix("_wrist")
-            return self._missing(target, prior, f"Mask#{target.mask.id} shows what the {arm} gripper holds, too close "
-                                 "to its own wrist camera to measure: measure it in the head camera, or work out "
-                                 "where it is from the gripper", covered=False), None, []
+            arm = next((a for a in self.rig.arms if self.wrist_of(a) == view.cam), view.cam)
+            return self._missing(target, prior, f"Mask#{target.mask.id} shows what the {self.gripper_words(arm)} holds, "
+                                 f"too close to its own wrist camera to measure: measure it in the {self.head} camera, "
+                                 "or work out where it is from the gripper", covered=False), None, []
         if np.count_nonzero(first_mask & view.robot) >= ON_ROBOT * area and target.mask.score < ROBOT_SCORE:
             return self._missing(target, prior, f"Mask#{target.mask.id} lies on the robot's own arm or gripper"), \
                 None, []
@@ -791,13 +856,14 @@ class Scene:
             cam = shape.views[0]
             above = any(n.startswith("seen only from above") for n in shape.notes)
             height = "unknown" if above else "guessed"
-            blocker = self._hiding_from_head(center) if cam != "head" else None
+            blocker = self._hiding_from_head(center) if cam != self.head else None
             advised = not height_known
             if height_known:
                 warnings.append(f"1 view ({cam}): height from its earlier measurement")
             elif blocker is not None:
-                warnings.append(f"1 view ({cam}{', from above' if above else ''}): height {height} - the {blocker} "
-                                f"arm hides it from the head camera; {self._hover_advice(shape, held_by)}")
+                warnings.append(f"1 view ({cam}{', from above' if above else ''}): height {height} - the "
+                                f"{self.arm_words(blocker)} hides it from the {self.head} camera; "
+                                f"{self._hover_advice(shape, held_by)}")
             elif above:
                 warnings.append(f"1 view ({cam}, looking straight down on it): height unknown - "
                                 f"{self._hover_advice(shape, held_by)}")
@@ -817,7 +883,7 @@ class Scene:
                                 f"picture alone suggests, not lie low - {self._hover_advice(standing, held_by)}")
                 advised = True
         if held_by is not None:
-            warnings.insert(0, f"held by {held_by}: the fingers hide part of it")
+            warnings.insert(0, f"{self.held_words(held_by)}: the fingers hide part of it")
         else:
             hidden, more = self._hidden(sights, shape, advised=advised)
             warnings += hidden
@@ -837,7 +903,7 @@ class Scene:
                 notes.append(f"{100 * moved:.1f} cm from where the earlier one-camera measurement put it")
         if not remember:
             return Thing(id=thing_id, label=target.label, found=True, center_xyz=center, top=top, size=size,
-                         grip_yaw=None if shape.round else round(float(shape.grip_yaw), 1), on=on, on_z=on_z,
+                         grip_yaw=None if shape.round else round(float(self.grip_yaw(shape)), 1), on=on, on_z=on_z,
                          views=list(shape.views), err_mm=_round_err(shape.err_mm), warning=warning, masks=masks,
                          seq=snap.seq, round=shape.round, notes=notes, step=snap.step)
         if thing_id == 0:
@@ -847,7 +913,7 @@ class Scene:
         if rec is not None and target.text is None and rec.text is not None:
             label = rec.thing.label  # keep the words over a pixel label
         thing = Thing(id=thing_id, label=label, found=True, center_xyz=center, top=top, size=size,
-                      grip_yaw=None if shape.round else round(float(shape.grip_yaw), 1), on=on, on_z=on_z,
+                      grip_yaw=None if shape.round else round(float(self.grip_yaw(shape)), 1), on=on, on_z=on_z,
                       views=list(shape.views), err_mm=_round_err(shape.err_mm), warning=warning, masks=masks,
                       seq=snap.seq, round=shape.round, notes=notes, step=snap.step)
         bottom = float(shape.bottom)
@@ -901,15 +967,14 @@ class Scene:
             why = self._covered(target.view, target.click) or why
         elif covered and target.place is not None:
             views = self.views()
-            hidden = self._arm_over([views[c] for c in ORDER if c in views], target.place)
+            hidden = self._arm_over([views[c] for c in self.order if c in views], target.place)
             if hidden is not None:
                 why = f"{why} - {hidden}: move the arm aside and measure again"
         return Thing(id=prior.thing.id if prior is not None else 0, label=target.label, found=False,
                      why_missing=why, notes=list(target.notes), masks={target.view.cam: target.mask},
                      seq=self.host.snap.seq, step=self.host.snap.step)
 
-    @staticmethod
-    def _covered(view: View, xy) -> str | None:
+    def _covered(self, view: View, xy) -> str | None:
         """Why an object clicked at this pixel is not measured, when the robot covers the pixel in the
         picture (see ON_ROBOT_PATCH): which arm, and what to do."""
         labels = view.labels()
@@ -923,8 +988,8 @@ class Scene:
             values, counts = np.unique(patch[patch > 0], return_counts=True)
             value = int(values[np.argmax(counts)])
         arm = view.arm_of(value)
-        said = _covering(arm, view.cam, f"({xy[0]:.0f}, {xy[1]:.0f})")
-        if view.cam == f"{arm}_wrist":
+        said = self._covering(arm, view.cam, f"({xy[0]:.0f}, {xy[1]:.0f})")
+        if view.cam == self.wrist_of(arm):
             return f"{said}: measure it in another camera's picture"
         return f"{said}: move the arm aside and measure again, or measure it in another camera's picture"
 
@@ -966,7 +1031,7 @@ class Scene:
             if self._holding(arm):
                 grip = self._grasp_pose(arm)[:3, 3]
                 if _box_gap(grip, shape.center, shape.size, shape.yaw) <= HELD_GAP:
-                    return f"held by {arm}", None, arm
+                    return self.held_words(arm), None, arm
         bottom = float(shape.bottom)
         if bottom <= self.rig.table_z + ON_TABLE:
             return "table", self.rig.table_z, None
@@ -989,17 +1054,18 @@ class Scene:
         return f"something at z {bottom:.3f}", round(bottom, 4), None
 
     def _hover_advice(self, shape: hull.Shape, held_by: str | None) -> str:
-        busy = {arm for arm in ARMS if self._holding(arm)} | ({held_by} if held_by else set())
+        busy = {arm for arm in self.rig.arms if self._holding(arm)} | ({held_by} if held_by else set())
         got = self._look_pose(shape, busy)
         if got is None:
             alt = self._look_pose(shape, set()) if busy else None
             if alt is not None and alt[0] in busy:
-                return (f"only the {alt[0]} wrist camera could look down on it, and what the {alt[0]} gripper holds "
-                        "would hide it: take its size as rough, or put that down first")
+                return (f"only the {self.wrist_words(alt[0])} could look down on it, and what the "
+                        f"{self.gripper_words(alt[0])} holds would hide it: take its size as rough, or put that down "
+                        "first")
             return "no wrist camera can look down on it from close by: take its size as rough"
         arm, point, _, clear = got[:4]
-        text = (f"for a position within a few mm, look down on it with a wrist camera: robot.goto('{arm}', ({point[0]:.3f}, {point[1]:.3f}, "
-                f"{point[2]:.3f}), {self._look_angles(got)}), then measure this Thing again")
+        text = (f"for a position within a few mm, look down on it with a wrist camera: {self.look_command(arm, point, got)}, "
+                "then measure this Thing again")
         worst = min(clear, key=clear.get) if clear else None  # (empty: not checked)
         if worst is not None and clear[worst] < LOOK_CLEAR:
             text += f" (the robot will still hide about {100 * (1 - clear[worst]):.0f}% of it in {worst})"
@@ -1076,7 +1142,7 @@ class Scene:
             if arm not in view.arms:
                 continue
             m = view.arm_mask(arm)
-            if view.held is not None and view.cam == f"{arm}_wrist":
+            if view.held is not None and view.cam == self.wrist_of(arm):
                 m = m | view.held  # with what it holds
             share = float(m[yi, xi].mean())
             if share >= 0.3 and (best is None or share > best[1]):
@@ -1085,7 +1151,7 @@ class Scene:
 
     def _hiding_from_head(self, center) -> str | None:
         """The arm that hides this point from the head camera, if one does."""
-        head = self.views().get("head")
+        head = self.views().get(self.head)
         if head is None:
             return None
         c = np.asarray(center, float)
@@ -1105,13 +1171,13 @@ class Scene:
                 if why == "robot":
                     view = views.get(cam)
                     arm = self._arm_hiding(view, h.points) if view is not None else None
-                    reasons.append(f"behind the {arm + ' arm' if arm else 'robot'} in {cam}")
+                    reasons.append(f"behind the {self.arm_words(arm) if arm else 'robot'} in {cam}")
                     arms += [arm] if arm else []
                 elif why == "edge":
                     reasons.append(f"outside the {cam} picture")
             if not reasons:
                 continue
-            side = _side(h.normal)  # a round object's eight directions share four names
+            side = self.side_words(h.normal)  # a round object's eight directions share four names
             reach, why0, arms0 = sides.get(side, (0.0, [], []))
             sides[side] = (max(reach, h.reach), list(dict.fromkeys(why0 + reasons)),
                            list(dict.fromkeys(arms0 + arms)))
@@ -1125,7 +1191,7 @@ class Scene:
                                   for side, (reach, why, _) in warned)
         arms = list(dict.fromkeys(arm for _, (_, _, those) in warned for arm in those))
         if arms:
-            fix = f" - move the {' and '.join(arms)} arm{'s' if len(arms) > 1 else ''} out of the way"
+            fix = f" - move the {self.arms_words(arms)} out of the way"
         else:
             fix = "" if advised else f" - {self._hover_advice(shape, None)}"
         return [f"partly hidden: may reach up to {reach_text}; center and size may be off{fix}"], notes
@@ -1183,7 +1249,7 @@ class Scene:
             best = loose
         if best:
             top_iou = max(b[0] for b in best.values())
-            cam = next(c for c in ORDER if c in best)
+            cam = next(c for c in self.order if c in best)
             if best[cam][0] < top_iou - 0.15:
                 cam = max(best, key=lambda c: best[c][0])
             view = views[cam]
@@ -1214,8 +1280,7 @@ class Scene:
         return Thing(id=thing.id, label=label, found=False, why_missing=why,
                      seq=self.host.snap.seq, step=self.host.snap.step)
 
-    @staticmethod
-    def _arm_over(views: list[View], points: np.ndarray) -> str | None:
+    def _arm_over(self, views: list[View], points: np.ndarray) -> str | None:
         """Which arm covers the place of these points in the first picture where one covers more than
         REFIND_HIDDEN of it (see there), said as 'the left arm covers that place in the head picture'."""
         for view in views:
@@ -1225,7 +1290,7 @@ class Scene:
             on = view.labels()[region]
             if np.count_nonzero(on) <= REFIND_HIDDEN * on.size:
                 continue
-            return _covering(view.arm_of(int(np.bincount(on[on > 0]).argmax())), view.cam, "that place")
+            return self._covering(view.arm_of(int(np.bincount(on[on > 0]).argmax())), view.cam, "that place")
         return None
 
     @staticmethod
@@ -1303,7 +1368,7 @@ class Scene:
         start = self._by_pixel(view.cam, xy)
         if isinstance(start, Thing):
             return None, "nothing is outlined there"
-        thing, shape, sights = self._measure(start, list(ORDER), remember=False)
+        thing, shape, sights = self._measure(start, list(self.order), remember=False)
         if not thing.found or shape is None:
             return None, f"the object there could not be measured ({thing.why_missing})"
         if max(shape.size[:2]) > MAX_OBJECT:
@@ -1364,33 +1429,12 @@ def _round_err(err) -> float | None:
     return round(float(err), 1)
 
 
-def _covering(arm: str, cam: str, what: str) -> str:
-    """'the left arm covers <what> in the head picture' (the gripper, in its own wrist camera's)."""
-    if cam == f"{arm}_wrist":
-        return f"the {arm} gripper covers {what} in its own {cam} picture"
-    return f"the {arm} arm covers {what} in the {cam} picture"
-
-
 def _clicked(prompt: dict) -> tuple[float, float] | None:
     """The one pixel an outline was clicked at (find's at=, or measure's (cam, (x, y))), if it was."""
     points = prompt.get("points") or []
     if len(points) != 1 or list(prompt.get("labels") or [1]) != [1] or prompt.get("box") is not None:
         return None
     return float(points[0][0]), float(points[0][1])
-
-
-def _cams(cams) -> list[str]:
-    if cams is None or cams in ("auto", "all"):
-        return list(ORDER)
-    names = [cams] if isinstance(cams, str) else list(cams)
-    out: list[str] = []
-    for c in names:
-        name = check_cam(c)
-        if name not in out:
-            out.append(name)
-    if not out:
-        raise Refused("measure: cams is 'auto' or a list of camera names")
-    return out
 
 
 def _describe(target) -> str:

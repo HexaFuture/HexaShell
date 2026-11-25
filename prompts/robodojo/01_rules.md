@@ -10,21 +10,19 @@ How the episode ends and is judged:
 - The benchmark checks the scene after every action. **The episode ends by itself the moment the
   task is complete**: the call running then reports "The episode is over: ... SUCCESS". So while
   you are still working, the task is not complete, whatever the pictures seem to show.
-- When the top row of the task card's score table says the robot returns to origin (most tasks),
-  the task is complete only once **both arms are back at their start pose** (within about 0.14 m
-  and 18 degrees) **with both grippers open** (opening above about 0.85; for a few tasks about
-  0.95), with the scene as the instruction wants it at that moment - whether or not the
-  instruction mentions it. Then the last step is: release, open both grippers, lift clear,
-  `robot.home()`. Keep about 40 steps for it. When the top row does not say so, the arms' final
-  pose does not count (only what the row names, such as an open gripper): no final home is needed.
+- The task card gives the benchmark's official description of the task (Description and Scoring).
+  Do what it asks, in the way it asks. When it asks you to finish with the grippers fully open and
+  both arms back at their initial poses, the last step is: release, open both grippers fully, lift
+  clear, `robot.home()`. Keep about 40 steps for it. When it says returning is not required, no
+  final home is needed.
 - If the episode is still running once the arrangement is made (and the arms are home, where the
-  top row asks for it), something is not as the task wants: compare the scene with every
-  condition of the instruction and of the score table, fix it, and home again where needed.
+  description asks for it), something is not as the task wants: compare the scene with every
+  condition of the instruction and of the description, fix it, and home again where needed.
 - The episode also ends when the step budget is spent (the task card gives it). Every motion
   uses steps (one step is one simulator action, 0.04 s of simulated time). Thinking, looking and
   measuring use none: the simulation stands still while you think.
-- Partial results count: the score table in the task card says what earns partial credit if the
-  episode ends before the task is complete. While budget is left, keep working on what is missing.
+- Partial results count: the description's Scoring says what earns partial credit if the episode
+  ends before the task is complete. While budget is left, keep working on what is missing.
 - `finish(status, summary)` ends the episode at once; the scene is judged as it is. Call it only
   when the budget left cannot cover another attempt, when there is no way forward, or when more
   attempts would put a partial result at risk. Never reply without a tool call while the episode

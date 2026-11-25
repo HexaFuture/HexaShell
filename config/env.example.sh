@@ -32,6 +32,22 @@ export HEXASHELL_ROBOTWIN_PYTHON=/path/to/HexaShell/.venvs/bench-robotwin/bin/py
 export HEXASHELL_ROBOTWIN_ENV=/path/to/HexaShell/.bench-data/robotwin/env.sh
 # RoboCasa's kitchens: pretrain (RoboCasa's official evaluation split) or pretrain50 (the default when unset)
 export HEXASHELL_ROBOCASA_SPLIT=pretrain
+export HEXASHELL_LIBEROPRO2_PYTHON=/path/to/LIBERO-Pro-evaluation/.envs/libero-pro/bin/python
+export HEXASHELL_LIBEROPRO2_ENV=/path/to/HexaShell/.bench-data/libero-pro2/env.sh
+export HEXASHELL_SIMPLE_PYTHON=/path/to/SIMPLE/.venv/bin/python
+export HEXASHELL_SIMPLE_ENV=/path/to/HexaShell/.bench-data/simple/env.sh
+export HEXASHELL_DEXJOCO_X_PYTHON=/path/to/HexaShell/.venvs/bench-dexjoco-x/bin/python
+export HEXASHELL_DEXJOCO_X_ENV=/path/to/HexaShell/.bench-data/dexjoco-x/env.sh
+# The official test episodes of SIMPLE (seeds 3000-3029) and DexJoCo-X (seeds 10000000 + 1000 * the task's index + i)
+# are refused unless the run sets one of these to 1:
+# export HEXASHELL_SIMPLE_OFFICIAL_TEST=1
+# export HEXASHELL_DEXJOCO_X_OFFICIAL_TEST=1
+# RoboColiseum, local runs only (the online agent needs no simulator): the folders that hold genie_sim, its assets
+# and what scripts/setup/geniesim35_native_config.sh and geniesim36_container.sh make. The two seasons use different
+# versions of the assets, so leave GENIESIM_ASSETS unset or set it per run.
+# export HEXASHELL_GENIESIM35=/path/to/HexaShell/.bench-data/geniesim-3.5    # Season I, Genie Sim 3.5
+# export GENIESIM_PYTHON=/path/to/HexaShell/.venvs/bench-geniesim35/bin/python
+# export HEXASHELL_GENIESIM36=/path/to/HexaShell/.bench-data/geniesim-3.6    # Season II, Genie Sim 3.6 (docker)
 
 # The model's API key is read from deploy.yml api_key_file (~/.config/hexashell/api-key: one line,
 # chmod 600), else from $OPENAI_API_KEY. Never put the key in this repository.

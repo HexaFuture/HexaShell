@@ -12,21 +12,28 @@ from ...robot import proxy as _dojo
 from ...robot.proxy import Blocked, Dropped, NotExecuted, RobotError  # noqa: F401 - the exceptions a cell may catch
 
 
-class Robot:
-    # Share transport and image helpers without inheriting the simulator's segmentation API.
+class RobotBase:
+    # The calls that move one arm at a time; Robot adds both(). The FR3's robot (real/franka/proxy.py), one arm,
+    # builds on this. Share transport and image helpers without inheriting the simulator's segmentation API.
     __init__ = _dojo.Robot.__init__
     to_pixel = _dojo.Robot.to_pixel
     task = _dojo.Robot.task
     image = _dojo.Robot.image
     look = _dojo.Robot.look
 
-    def goto(self, arm, xyz=None, *, by=None, pitch=None, yaw=None, roll=None, grip=None,
-             path="auto", dry_run=False, contact=False, gentle=False):
+    def goto(self, arm, xyz=None, *, by=None, pitch=None, yaw=None, roll=None, hand_by=None, hand_turn=None,
+             grip=None, path="auto", dry_run=False, contact=False, gentle=False):
         """Move the selected arm's URAI TCP (by default the fingertip, 142.5 mm along link6 +z; see the task card).
 
         arm is left/right; xyz accepts a point, Thing, Spot or ArmStatus; by is a world-frame offset in metres.
         Omitted pitch/yaw/roll values keep the previous request. At pitch 90 the tool points down;
-        yaw 0/90 closes along world x/y. grip='open'/'close'/0..1 is sent at the start of the motion.
+        yaw 0/90 closes along world x/y. hand_by=(forward, left, up) in metres and hand_turn=(about forward,
+        about left, about up) in degrees move relative to the hand, in the axes of the last requested
+        orientation: forward is where the fingers point, left lies along the closing line, up completes them
+        (world up for a level hand at roll 0). hand_by shifts the TCP along those axes; hand_turn turns the
+        hand about the TCP by that rotation vector (direction = axis, length = angle, at most 170), so
+        hand_turn=(a, 0, 0) rolls by a. Together, the shift is along the axes before the turn. They do not
+        combine with xyz, by, pitch, yaw or roll. grip='open'/'close'/0..1 is sent at the start of the motion.
         path='line' is a strict Cartesian line; 'swing' is a joint-space curve; 'auto' tries the line first,
         then accepts a curve only within 3 cm of the line and at most 1 cm below the lower endpoint.
         URAI applies its IK, collision checks and time scaling.
@@ -37,8 +44,11 @@ class Robot:
         gentle=True caps the whole motion at the original H v1 endpoint limit of 0.5 m/s, without a faster
         middle; URAI's angular and joint limits still apply. The final pose is held without automatically
         returning home, raising the target or opening the gripper."""
-        return self._call("goto", (arm, xyz), dict(by=by, pitch=pitch, yaw=yaw, roll=roll, grip=grip,
-                                                    path=path, dry_run=dry_run, contact=contact, gentle=gentle))
+        kwargs = dict(by=by, pitch=pitch, yaw=yaw, roll=roll, grip=grip, path=path, dry_run=dry_run,
+                      contact=contact, gentle=gentle)
+        # only when given: a call without them reaches the host as before
+        kwargs.update({k: v for k, v in (("hand_by", hand_by), ("hand_turn", hand_turn)) if v is not None})
+        return self._call("goto", (arm, xyz), kwargs)
 
     def gripper(self, arm, opening):
         """Hold the joints and change the opening: open/close/0..1, scaled by the model's maximum opening in mm.
@@ -79,4 +89,27 @@ class Robot:
 
     def __repr__(self) -> str:
         return ("robot: goto, gripper, home, wait | to_world, to_pixel | "
+                "task, state, image, look, camera")
+
+
+class Robot(RobotBase):
+    def both(self, left=None, right=None, *, together=False):
+        """Move both arms in one URAI plan: they start at once and it costs the steps of the longer motion,
+        not their sum.
+
+        left, right: a dict of goto's arguments without dry_run, e.g. dict(xyz=(x, y, z), pitch=90),
+        dict(by=(0, 0, 0.1)) or dict(hand_by=(0.02, 0, 0)), or dict(grip='close') for only its gripper;
+        leave one out to move one arm.
+        together=True: both also end in the same step, the arm that would end first slowed to the other - for
+        two hands on one thing, or two ends of cloth; when it cannot be slowed so (a turn sets its pace),
+        NotExecuted.
+        Each arm is first planned alone, as goto's dry run (path='auto' chooses its path there); then URAI
+        plans the two together, the arms' clearance checked at every sample. If either cannot run,
+        NotExecuted: nothing moves, no steps. Returns a Both (.left, .right: Move or Grip, .steps). One URAI
+        execution runs both arms: whatever stops it stops both, and an empty grasp raises Dropped as goto
+        does."""
+        return self._call("both", (), dict(left=left, right=right, together=together))
+
+    def __repr__(self) -> str:
+        return ("robot: goto, gripper, both, home, wait | to_world, to_pixel | "
                 "task, state, image, look, camera")

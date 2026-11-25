@@ -1,0 +1,2 @@
+# Tasks whose skills (robot, board, task) all come from this folder, not from skills/robocoliseum/ itself.
+write_uppercase_letter_with_pen

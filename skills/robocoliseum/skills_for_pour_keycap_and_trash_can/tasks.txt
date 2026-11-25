@@ -1,0 +1,4 @@
+# Tasks whose skills (robot, board, task) all come from this folder, not from skills/robocoliseum/ itself.
+pour_50ml_into_graduated_cylinder
+keyboard_keycap_swap
+open_short_trash_can_and_throw_garbage

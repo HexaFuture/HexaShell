@@ -38,8 +38,11 @@ class RoboDojoSession(Session):
         first = parse_obs(obs, seq)
         self._log_state(seq, obs, None)
         scene = self._scene(settings)
+        if settings.two_hands:
+            self.proxy = "hexashell.robot.both_proxy"  # the kernel starts after open()
         self.host = RobotHost(self.bridge, first, scene=scene, log=rec.event, attach=attach,
-                              on_step=self._log_state, speed=speed_named(settings.motion))
+                              on_step=self._log_state, speed=speed_named(settings.motion),
+                              two_hands=settings.two_hands)
         self.first = first
         self.perception = scene is not None
 

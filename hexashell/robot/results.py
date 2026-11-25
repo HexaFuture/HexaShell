@@ -117,6 +117,22 @@ class Grip:
 
 
 @dataclass
+class Both:
+    """Two arms' motions run in the same steps."""
+    left: Any = None   # a Move or a Grip
+    right: Any = None
+    steps: int = 0
+    steps_left: int | None = None
+
+    def __repr__(self) -> str:
+        left = "" if self.steps_left is None else f"  [{self.steps_left} steps left]"
+        done = [str(m) for m in (self.left, self.right) if m is not None]
+        return "\n".join([f"Both: {self.steps} steps together{left}", *done])
+
+    __str__ = __repr__
+
+
+@dataclass
 class Homing:
     arms: dict[str, tuple[float, float]]  # arm -> (distance mm, turn deg) from its start pose
     steps: int = 0
@@ -256,7 +272,7 @@ class Thing:
         if self.warning:
             head += f"  ⚠ {self.warning}"
         size = "×".join(f"{v:.3f}" for v in self.size) if self.size else "?"
-        on = self.on if self.on_z is None or self.on == "table" or self.on.startswith(("something", "z ")) \
+        on = self.on if self.on_z is None or self.on in ("table", "floor") or self.on.startswith(("something", "z ")) \
             else f"{self.on} (z {self.on_z:.3f})"
         shape = " round" if self.round else ""
         yaw = "any" if self.grip_yaw is None else f"{self.grip_yaw:.0f}°"

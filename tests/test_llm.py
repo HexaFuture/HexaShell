@@ -112,6 +112,24 @@ def test_streamed_reply_equals_whole_reply():
         fake.close()
 
 
+def test_stream_opening_with_a_byte_order_mark():
+    """A BOM before the first event is dropped wherever the stream's pieces cut it; one later in the
+    stream, and plain LF or CRLF streams, read as before."""
+    bom = b"\xef\xbb\xbf"
+    first = {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "Hi", "tool_calls": [
+        {"index": 0, "id": "call_a", "type": "function", "function": {"name": "python", "arguments": ""}}]}}]}
+    lf = "".join(f"data: {json.dumps(c)}\n\n" for c in (first, _delta(content="!"))).encode() + b"data: [DONE]\n\n"
+    events = [json.dumps(first), json.dumps(_delta(content="!")), "[DONE]"]
+    for raw in (lf, lf.replace(b"\n", b"\r\n")):
+        assert list(llm._sse_data(llm._lines([raw]))) == events
+        body = bom + raw
+        for cut in range(len(body) + 1):
+            assert list(llm._sse_data(llm._lines([body[:cut], body[cut:]]))) == events, cut
+        assert list(llm._sse_data(llm._lines([body[i:i + 1] for i in range(len(body))]))) == events
+    assert list(llm._sse_data(llm._lines([bom + b"data: x"]))) == ["x"]  # no newline at all
+    assert list(llm._sse_data(llm._lines([b"data: a\n", bom + b"data: b\n"]))) == ["a"]  # only the first is a BOM
+
+
 def test_stream_failures_are_retried():
     fake = FakeGateway()
     events = []

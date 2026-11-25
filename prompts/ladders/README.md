@@ -7,6 +7,6 @@ at commit `52300752080325086095854e01977a8cf281b684`, under the Apache-2.0 licen
 `manifest.json` holds the SHA-256 of every file; `hexashell/runtime/card.py` refuses a file that
 does not match.
 
-The task card of prompt B carries the "Capability dimension", "Description" and "Scoring"
-sections of the episode's task (`_random` variants use their base task's file).  The `## Notes`
+With `ladder: true` (off under the agent track's rules) the task card carries the "Capability dimension",
+"Description" and "Scoring" sections of the episode's task (`_random` variants use their base task's file).  The `## Notes`
 sections that six files end with were written by RoboProbe for its own agent and are left out.

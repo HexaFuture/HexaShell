@@ -42,9 +42,16 @@ take() {    # remove and print the first episode line
 }
 add() { exec 8>"$todo.lock"; flock 8; echo "$1" >> "$todo"; flock -u 8; }
 
+record_name() { # an episode's record folder before its time stamp (LIBERO-Pro 2.0 hides the case behind a hash)
+    local bench=$1 task=$2 seed=$3
+    if [ "$bench" = liberopro2 ]; then
+        local m="${task%_*}"; echo "${m}_$(printf %s "$task" | sha256sum | cut -c1-8)_s${seed}"
+    else echo "${task}_s${seed}"; fi
+}
+
 outcome() { # "ok", or why the episode should be played again: its newest record since the launch
-    local task=$1 seed=$2 since=$3 rec
-    rec=$(find "$results" -maxdepth 1 -type d -name "${task}_s${seed}-*" -newermt "@$since" 2>/dev/null | sort | tail -n 1)
+    local bench=$1 task=$2 seed=$3 since=$4 rec
+    rec=$(find "$results" -maxdepth 1 -type d -name "$(record_name "$bench" "$task" "$seed")-*" -newermt "@$since" 2>/dev/null | sort | tail -n 1)
     [ -z "$rec" ] && { echo "no record"; return; }
     [ -f "$rec/result.json" ] || { echo "no result.json"; return; }
     "$HEXASHELL_PYTHON" -I -c '
@@ -77,7 +84,7 @@ while :; do
         kill -0 "$p" 2>/dev/null && continue
         wait "$p"; code=$?
         read -r bench task seed attempt <<<"${line_of[$p]}"
-        why=$(outcome "$task" "$seed" "${started[$p]}")
+        why=$(outcome "$bench" "$task" "$seed" "${started[$p]}")
         note "exit ${tag_of[$p]} gpu=${gpu_of[$p]} code=$code after $(( $(date +%s) - started[$p] ))s: $why"
         if [ "$why" != ok ]; then
             if (( attempt < ATTEMPTS )); then add "$bench $task $seed $((attempt + 1))"; note "listed ${tag_of[$p]} again"

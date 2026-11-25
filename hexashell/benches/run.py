@@ -1,5 +1,7 @@
 """One benchmark episode: ``python -m hexashell.benches.run --bench robocasa --task CloseFridge --seed 0``
-(or ``--bench libero --task libero_goal_swap_t3 --seed 0``, ``--bench robotwin --task adjust_bottle --seed 100000``).
+(or ``--bench libero --task libero_goal_swap_t3 --seed 0``, ``--bench robotwin --task adjust_bottle --seed 100000``,
+``--bench liberopro2 --task libero_goal_t8_S15 --seed 0``, ``--bench simple --task bend_pick --seed 1001``,
+``--bench dexjoco_x --task hammer_nail --seed 101165``).
 
 Agent settings: the benchmark's limits (replies, time) as defaults, then ``config/benches.yml``
 (or ``--config``), then ``HEXASHELL_<NAME>`` environment variables, then ``--set name=value``.
@@ -21,7 +23,7 @@ from dataclasses import fields
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BENCHES = ("robocasa", "libero", "robotwin")
+BENCHES = ("robocasa", "libero", "robotwin", "liberopro2", "simple", "dexjoco_x")
 
 
 def bench_defaults(bench: str, task: str) -> dict:
@@ -36,6 +38,21 @@ def bench_defaults(bench: str, task: str) -> dict:
         return {"max_turns": P.REPLIES, "budget_s": P.EPISODE_S, "ladder": False}
     if bench == "robotwin":
         from .robotwin import protocol as P
+
+        P.check_task(task)
+        return {"max_turns": P.REPLIES, "budget_s": P.EPISODE_S, "ladder": False}
+    if bench == "liberopro2":
+        from .liberopro2 import protocol as P
+
+        P.parse_task(task)
+        return {"max_turns": P.REPLIES, "budget_s": P.EPISODE_S, "ladder": False}
+    if bench == "simple":
+        from .simple import protocol as P
+
+        P.check_task(task)
+        return {"max_turns": P.REPLIES, "budget_s": P.EPISODE_S, "ladder": False}
+    if bench == "dexjoco_x":
+        from .dexjoco_x import protocol as P
 
         P.check_task(task)
         return {"max_turns": P.REPLIES, "budget_s": P.EPISODE_S, "ladder": False}
@@ -61,6 +78,21 @@ def make_session(bench: str, task: str, seed: int, *, python: str, env_file: str
 
         return RoboTwinSession({"task_name": task, "eval_seed": seed}, python=python, env_file=env_file,
                                egl_device=egl)
+    if bench == "liberopro2":
+        from .liberopro2.session import LiberoPro2Session
+
+        return LiberoPro2Session({"task_name": task, "eval_seed": seed}, python=python, env_file=env_file,
+                                 egl_device=egl)
+    if bench == "simple":
+        from .simple.session import SimpleSession
+
+        return SimpleSession({"task_name": task, "eval_seed": seed}, python=python, env_file=env_file,
+                             egl_device=egl)
+    if bench == "dexjoco_x":
+        from .dexjoco_x.session import DexterousSession
+
+        return DexterousSession({"task_name": task, "eval_seed": seed}, python=python, env_file=env_file,
+                                egl_device=egl)
     raise ValueError(f"unknown benchmark {bench!r}")
 
 

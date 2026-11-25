@@ -16,11 +16,13 @@ import pytest
 
 import fakes
 import fakes_urai as F
-from hexashell.geometry import homogeneous, rot_x, rot_y, rot_z
+from hexashell.geometry import angle_between, exp_so3, homogeneous, rot_x, rot_y, rot_z
 from hexashell.kernel.host import CallFailed, Stop
+from hexashell.motion.pose import rotation_of
 from hexashell.real.urai import texts
 from hexashell.real.urai.capsules import Capsule, capsule_hit
-from hexashell.real.urai.frames import from_rpy, rotation_rpy, rpy_of, tcp_pose, to_rpy
+from hexashell.real.urai.frames import (from_rpy, hand_axes, hand_move, hand_move_between, rotation_rpy, rpy_of,
+                                        tcp_pose, to_rpy)
 from hexashell.real.urai.host import STEP_S, UraiHost
 from hexashell.real.urai.observation import CAMERA_TO_URAI, Observation
 from hexashell.vision.cameras import Camera, check_cam
@@ -93,6 +95,69 @@ def test_rpy_is_scipys_xyz():
         rot = Rotation.from_euler("xyz", rpy, degrees=True).as_matrix()
         assert np.allclose(rotation_rpy(rpy), rot, atol=1e-12)
         assert np.allclose(rpy_of(rot), Rotation.from_matrix(rot).as_euler("xyz", degrees=True), atol=1e-8)
+
+
+# -- the hand's own axes ---------------------------------------------------------------------------
+@pytest.mark.parametrize("angles", [(0.0, 0.0, 0.0), (90.0, 0.0, 0.0), (45.0, 30.0, -20.0), (-30.0, 150.0, 170.0)])
+def test_hand_axes_are_the_tool_axes_of_pitch_yaw_roll(angles):
+    """forward = where the fingers point (URAI's tool +z), left = the closing line (its +x), up = forward x left."""
+    axes, tool = hand_axes(to_rpy(*angles)), rotation_rpy(to_rpy(*angles))
+    assert np.allclose(axes, rotation_of(*angles), atol=1e-12)
+    assert np.allclose(axes[:, 0], tool[:, 2], atol=1e-12) and np.allclose(axes[:, 1], tool[:, 0], atol=1e-12)
+    assert np.allclose(axes[:, 2], np.cross(axes[:, 0], axes[:, 1]), atol=1e-12)
+
+
+def test_hand_axes_of_a_level_and_a_downward_hand():
+    level = hand_axes(to_rpy(0.0, 0.0, 0.0))  # pointing along world +y: left is world -x, up is world up
+    assert np.allclose(level, [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]], atol=1e-12)
+    down = hand_axes(to_rpy(90.0, 0.0, 0.0))  # pointing down, closing along world x
+    assert np.allclose(down[:, 0], (0.0, 0.0, -1.0), atol=1e-12) and np.allclose(down[:, 1], (-1.0, 0.0, 0.0), atol=1e-12)
+    assert np.allclose(down[:, 2], (0.0, 1.0, 0.0), atol=1e-12)
+
+
+def _hand_pose(tcp) -> np.ndarray:
+    return homogeneous(hand_axes(tcp["rpy_deg"]), tcp["xyz"])
+
+
+def _random_tcp(rng) -> dict:
+    return {"xyz": rng.uniform(-0.5, 0.5, 3).tolist(), "rpy_deg": rng.uniform((-180, -90, -180), (180, 90, 180)).tolist()}
+
+
+def test_hand_move_composes_in_the_start_axes_and_hand_move_between_inverts_it():
+    """end = start @ [exp(hand_turn), hand_by] as poses in the hand's axes; the labels come back exactly, up to
+    turns of 179 degrees."""
+    rng = np.random.default_rng(11)
+    for _ in range(300):
+        start = _random_tcp(rng)
+        shift = rng.uniform(-0.2, 0.2, 3)
+        axis = rng.normal(size=3)
+        turn = axis / np.linalg.norm(axis) * rng.uniform(0.0, 179.0)
+        xyz, rpy = hand_move(start["xyz"], start["rpy_deg"], shift, turn)
+        end = {"xyz": xyz.tolist(), "rpy_deg": rpy}
+        assert np.allclose(_hand_pose(end), _hand_pose(start) @ homogeneous(exp_so3(np.radians(turn)), shift), atol=1e-9)
+        back_shift, back_turn = hand_move_between(start, end)
+        assert np.allclose(back_shift, shift, atol=1e-9) and np.allclose(back_turn, turn, atol=1e-6)
+    # the shift alone keeps the orientation; a turn about forward alone is a roll
+    xyz, rpy = hand_move((0.2, 0.0, 0.2), to_rpy(45.0, 30.0, -20.0), (0.05, 0.0, 0.0))
+    assert np.allclose(xyz, np.add((0.2, 0.0, 0.2), 0.05 * rotation_of(45.0, 30.0, -20.0)[:, 0]), atol=1e-12)
+    assert np.allclose(rotation_rpy(rpy), rotation_rpy(to_rpy(45.0, 30.0, -20.0)), atol=1e-12)
+    _, rpy = hand_move((0.2, 0.0, 0.2), to_rpy(45.0, 30.0, -20.0), hand_turn=(25.0, 0.0, 0.0))
+    assert np.allclose(from_rpy(rpy), (45.0, 30.0, 5.0), atol=0.01)
+
+
+def test_hand_moves_do_not_depend_on_the_world_frame():
+    """The same two TCP poses seen from another frame (say the other arm's base) give the same hand_by and
+    hand_turn: a recorded motion's hand moves need no calibration between the bases."""
+    rng = np.random.default_rng(5)
+    other = homogeneous(rotation_rpy([10.0, -20.0, 75.0]), (0.1, -0.6, 0.02))
+
+    def seen(tcp):
+        pose = other @ tcp_pose(tcp)
+        return {"xyz": pose[:3, 3].tolist(), "rpy_deg": rpy_of(pose[:3, :3])}
+
+    for _ in range(100):
+        a, b = _random_tcp(rng), _random_tcp(rng)
+        assert np.allclose(np.ravel(hand_move_between(a, b)), np.ravel(hand_move_between(seen(a), seen(b))), atol=1e-6)
 
 
 # -- capsules and pictures -----------------------------------------------------------------------
@@ -269,6 +334,218 @@ def test_goto_moves_through_urai_and_counts_its_time():
     missed = host.goto("left", by=(0.0, 0.0, 0.01))
     assert missed.moved and not missed.reached and missed.err_mm == pytest.approx(10.0)
     assert host.step == _steps(fake.executed)
+
+
+def test_hand_by_moves_along_the_asked_axes_from_the_measured_tcp():
+    fake, host, *_ = _host()
+    fake.miss = (0.002, 0.0, 0.0)
+    first = host.goto("left", (0.27, -0.12, 0.12), pitch=45, yaw=30, roll=-20)
+    fake.miss = (0.0, 0.0, 0.0)
+    asked_rpy = fake.drafts[-1]["arms"]["left"]["rpy_deg"]
+    fake.arms["left"]["rpy_deg"] = to_rpy(48.0, 33.0, -20.0)  # the hand a few degrees off what was asked
+    move = host.goto("left", hand_by=(0.03, -0.01, 0.02))
+    spec = fake.drafts[-1]["arms"]["left"]
+    axes = rotation_of(45.0, 30.0, -20.0)
+    assert np.allclose(spec["xyz"], np.add(first.at, axes @ (0.03, -0.01, 0.02)), atol=1e-12)
+    assert spec["rpy_deg"] == asked_rpy and move.target_angles == first.target_angles == (45.0, 30.0, -20.0)
+    assert move.ok and np.allclose(move.target, spec["xyz"])
+    # the same motion as by= with the world offset axes @ hand_by
+    host.goto("left", by=tuple(axes @ (0.0, 0.0, -0.02)), dry_run=True)
+    host.goto("left", hand_by=(0.0, 0.0, -0.02), dry_run=True)
+    by_spec, hand_spec = (fake.drafts[i]["arms"]["left"] for i in (-2, -1))
+    assert np.allclose(hand_spec.pop("xyz"), by_spec.pop("xyz"), atol=1e-12) and hand_spec == by_spec
+
+
+def test_hand_turn_turns_about_the_tcp_and_what_follows_keeps_it():
+    fake, host, *_ = _host()
+    first = host.goto("left", (0.27, -0.12, 0.12), pitch=45, yaw=30, roll=-20)
+    rolled = host.goto("left", hand_turn=(25.0, 0.0, 0.0))  # about forward: a roll
+    assert rolled.ok and np.allclose(rolled.target, first.at) and np.allclose(rolled.target_angles, (45.0, 30.0, 5.0))
+    start = hand_axes(host.aim["left"])
+    turn = (10.0, -30.0, 40.0)
+    turned = host.goto("left", hand_turn=turn)
+    spec = fake.drafts[-1]["arms"]["left"]
+    assert turned.ok and np.allclose(spec["xyz"], rolled.at, atol=1e-12)
+    assert np.allclose(hand_axes(spec["rpy_deg"]), start @ exp_so3(np.radians(turn)), atol=1e-12)
+    assert turned.target_angles == host.asked["left"] == from_rpy(spec["rpy_deg"]) and host.aim["left"] == spec["rpy_deg"]
+    # omitted angles, by= and hand_by keep the turned orientation exactly
+    assert host.goto("left", by=(0.0, 0.0, 0.01)).target_angles == turned.target_angles
+    assert fake.drafts[-1]["arms"]["left"]["rpy_deg"] == spec["rpy_deg"]
+    host.goto("left", hand_by=(0.01, 0.0, 0.0))
+    assert fake.drafts[-1]["arms"]["left"]["rpy_deg"] == spec["rpy_deg"]
+    assert np.allclose(np.subtract(fake.drafts[-1]["arms"]["left"]["xyz"], fake.drafts[-2]["arms"]["left"]["xyz"]),
+                       0.01 * hand_axes(spec["rpy_deg"])[:, 0], atol=1e-12)
+    # and the opposite turn comes back
+    host.goto("left", hand_turn=tuple(-v for v in turn))
+    assert math.degrees(angle_between(hand_axes(fake.drafts[-1]["arms"]["left"]["rpy_deg"]), start)) < 1e-9
+
+
+def test_hand_by_with_hand_turn_shifts_along_the_axes_before_the_turn():
+    fake, host, *_ = _host()
+    first = host.goto("left", (0.27, -0.12, 0.12), pitch=60, yaw=-40, roll=10)
+    move = host.goto("left", hand_by=(0.02, 0.01, -0.01), hand_turn=(0.0, 0.0, 90.0), grip=0.5, path="line")
+    spec = fake.drafts[-1]["arms"]["left"]
+    axes = rotation_of(60.0, -40.0, 10.0)
+    assert np.allclose(spec["xyz"], np.add(first.at, axes @ (0.02, 0.01, -0.01)), atol=1e-12)
+    assert np.allclose(hand_axes(spec["rpy_deg"]), axes @ rot_z(math.pi / 2), atol=1e-12)
+    assert spec["motion"] == "line" and spec["opening_mm"] == 0.5 * F.MAX_OPENING_MM and move.ok
+
+
+@pytest.mark.parametrize("world", [dict(xyz=(0.2, 0.0, 0.2)), dict(by=(0.0, 0.0, 0.01)), dict(pitch=90.0),
+                                   dict(yaw=0.0), dict(roll=0.0)])
+def test_hand_moves_take_no_world_target_or_angles(world):
+    fake, host, *_ = _host()
+    xyz = world.pop("xyz", None)
+    for hand in (dict(hand_by=(0.01, 0.0, 0.0)), dict(hand_turn=(0.0, 0.0, 10.0))):
+        text = _failed("ValueError", host, "goto", "left", xyz, **hand, **world)
+        assert "without xyz, by, pitch, yaw or roll" in text
+    assert not fake.drafts and host.step == 0
+
+
+def test_hand_moves_refuse_what_is_not_three_numbers_and_long_turns():
+    fake, host, *_ = _host()
+    assert "(forward, left, up) in metres" in _failed("ValueError", host, "goto", "left", hand_by=(0.01, 0.0))
+    assert "(forward, left, up) in metres" in _failed("ValueError", host, "goto", "left", hand_by=(0.01, math.nan, 0.0))
+    assert "in degrees" in _failed("ValueError", host, "goto", "left", hand_turn="roll")
+    assert "at most 170" in _failed("ValueError", host, "goto", "left", hand_turn=(0.0, 0.0, 171.0))
+    assert "173.2 degrees" in _failed("ValueError", host, "goto", "left", hand_turn=(100.0, 100.0, 100.0))
+    assert not fake.drafts and host.step == 0
+    assert host.goto("left", hand_turn=np.array([0.0, 0.0, 170.0]), dry_run=True).reached
+
+
+def test_hand_moves_dry_run_and_refusals_keep_the_asked_pose():
+    fake, host, *_ = _host()
+    host.goto("left", (0.27, -0.12, 0.12), pitch=45, yaw=30, roll=0)
+    asked, aim = host.asked["left"], host.aim["left"]
+    dry = host.goto("left", hand_turn=(0.0, 0.0, 45.0), dry_run=True)
+    assert dry.reached and not dry.moved and dry.target_angles != asked
+    assert host.asked["left"] == asked and host.aim["left"] == aim
+    assert "NOT executed" in _failed("NotExecuted", host, "goto", "left", hand_by=(5.0, 0.0, 0.0))
+    assert host.asked["left"] == asked and host.aim["left"] == aim
+    # the next hand move still starts from what was asked
+    host.goto("left", hand_by=(0.0, 0.0, 0.01))
+    assert fake.drafts[-1]["arms"]["left"]["rpy_deg"] == aim
+
+
+def test_proxy_passes_hand_moves_only_when_given():
+    from hexashell.real.urai.proxy import Robot
+
+    calls = []
+    robot = Robot(lambda name, args, kwargs: calls.append((name, args, kwargs)))
+    robot.goto("left", by=(0.0, 0.0, 0.01))
+    robot.goto("right", hand_by=(0.01, 0.0, 0.0), hand_turn=(0.0, 0.0, 10.0), path="line")
+    assert calls[0] == ("goto", ("left", None), dict(by=(0.0, 0.0, 0.01), pitch=None, yaw=None, roll=None, grip=None,
+                                                     path="auto", dry_run=False, contact=False, gentle=False))
+    assert calls[1][2]["hand_by"] == (0.01, 0.0, 0.0) and calls[1][2]["hand_turn"] == (0.0, 0.0, 10.0)
+    assert calls[1][2]["path"] == "line" and "hand_by" in Robot.goto.__doc__ and "hand_turn" in Robot.goto.__doc__
+
+
+def test_both_moves_the_two_arms_in_one_plan():
+    fake, host, events, states, _ = _host(step_limit=500)
+    both = host.both(left=dict(by=(0.0, 0.0, 0.05)), right=dict(xyz=(0.25, -0.3, 0.15), pitch=90, yaw=30, roll=0,
+                                                                  path="line"))
+    # each arm planned alone first, as goto's dry run; then the pair: one plan, one execution
+    assert [sorted(d["arms"]) for d in fake.drafts] == [["left"], ["right"], ["left", "right"]]
+    assert [r["body"]["planning_only"] for r in fake.requests if r["path"] == "/api/preview"] == [True, True, False]
+    assert fake.drafts[-1]["arms"] == {"left": fake.drafts[0]["arms"]["left"], "right": fake.drafts[1]["arms"]["right"]}
+    assert len(fake.executed) == 1 and len(states) == 1
+    assert both.steps == host.step == _steps(fake.executed) and both.steps_left == 500 - host.step
+    assert both.left.ok and np.allclose(both.left.at, np.add(F.START_XYZ["left"], (0.0, 0.0, 0.05)))
+    assert both.right.ok and np.allclose(both.right.at, (0.25, -0.3, 0.15))
+    # one clock: the shorter motion ends first and holds, its own steps are fewer
+    assert both.left.steps == math.ceil(0.05 / 0.12 / STEP_S) < both.right.steps <= both.steps
+    assert host.asked == {"left": (90.0, 0.0, 0.0), "right": (90.0, 30.0, 0.0)}
+    assert str(both).startswith(f"Both: {both.steps} steps together  [{both.steps_left} steps left]\nMove left: at")
+
+
+def test_both_takes_a_gripper_alone_and_hand_moves():
+    fake, host, *_ = _host()
+    both = host.both(left=dict(grip="close"), right=dict(hand_by=(0.02, 0.0, 0.0), grip=0.5))
+    # a gripper alone is not planned first; the hand moves forward (down) from the measured TCP
+    assert [sorted(d["arms"]) for d in fake.drafts] == [["right"], ["left", "right"]]
+    assert fake.drafts[-1]["arms"]["left"] == {"primitive": "gripper", "opening_mm": 0.0, "effort": 1000,
+                                               "duration_s": F.MAX_OPENING_MM / 100.0 + 0.3}
+    assert fake.drafts[-1]["arms"]["right"]["opening_mm"] == 0.5 * F.MAX_OPENING_MM
+    assert type(both.left).__name__ == "Grip" and both.left.goal == 0.0 and both.left.holding is False
+    assert both.right.ok and np.allclose(both.right.at, np.add(F.START_XYZ["right"], (0.0, 0.0, -0.02)))
+    assert host.grip_goal == {"left": 0.0, "right": 0.5} and fake.arms["left"]["gripper_mm"] == 0.0
+    assert both.left.steps == math.ceil((F.MAX_OPENING_MM / 100.0 + 0.3) / STEP_S) and both.steps == host.step
+    assert both.right.steps == math.ceil(0.02 / 0.12 / STEP_S)
+    one = host.both(right=dict(by=(0.0, 0.0, 0.01)))
+    assert one.left is None and one.right.ok and sorted(fake.drafts[-1]["arms"]) == ["right"]
+
+
+def test_both_refusals_move_nothing():
+    fake, host, *_ = _host()
+    before, asked = json.dumps(fake.arms), dict(host.asked)
+    for bad, words in [(dict(left=(0.2, 0.0, 0.2)), "is a dict of goto's arguments"),
+                       (dict(left=dict(by=(0.0, 0.0, 0.01), dry_run=True)), "has no ['dry_run']"),
+                       (dict(), "at least one arm"),
+                       (dict(left=dict(grip="half")), "gripper opening"),
+                       (dict(right=dict(hand_by=(0.01, 0.0, 0.0), by=(0.0, 0.0, 0.01))), "hand_by and hand_turn")]:
+        assert words in _failed("ValueError", host, "both", **bad)
+    assert not fake.drafts
+    # an arm refused alone: its dry run says why
+    text = _failed("NotExecuted", host, "both", left=dict(by=(0.0, 0.0, 0.01)), right=dict(xyz=(9.0, 9.0, 9.0)))
+    assert text.startswith("Move right (dry run): NOT reachable") and "目标超出工作空间" in text
+    assert text.endswith("\n" + texts.BOTH_NOT_EXECUTED)
+    # the pair refused: URAI's reason (here the arms would meet)
+    text = _failed("NotExecuted", host, "both", left=dict(xyz=(0.25, -0.1, 0.25)), right=dict(xyz=(0.25, -0.15, 0.25)))
+    assert text.startswith("both(): left would hit the right arm") and text.endswith("\n" + texts.BOTH_NOT_EXECUTED)
+    assert not fake.executed and host.step == 0 and json.dumps(fake.arms) == before and host.asked == asked
+
+
+def test_both_chooses_each_arms_path_as_goto_does():
+    fake, host, *_ = _host()
+    fake.no_line, fake.bend = True, 0.02
+    both = host.both(left=dict(by=(0.05, 0.0, 0.0)), right=dict(by=(0.05, 0.0, 0.0), path="swing", contact=True))
+    assert [(sorted(d["arms"]), [spec["motion"] for spec in d["arms"].values()]) for d in fake.drafts] == [
+        (["left"], ["line"]), (["left"], ["swing"]), (["right"], ["swing"]), (["left", "right"], ["swing", "swing"])]
+    assert both.left.path == both.right.path == "swing"
+    assert both.left.notes == ["left: 直线路径与桌面碰撞", texts.SWING_USED.format(off=20.0, dip=0.0)]
+    assert both.right.notes == [texts.CONTACT]
+    fake.bend = 0.05  # too far from the line for "auto"
+    text = _failed("NotExecuted", host, "both", left=dict(by=(0.05, 0.0, 0.0)), right=dict(by=(0.0, 0.0, 0.01)))
+    assert texts.SWING_REFUSED.format(off=50.0, dip=0.0) in text and len(fake.executed) == 1
+
+
+def test_together_slows_the_arm_that_would_end_first():
+    fake, host, *_ = _host()
+    apart = host.both(left=dict(by=(0.0, 0.0, 0.05)), right=dict(by=(0.0, 0.0, 0.1)))
+    assert apart.left.steps < apart.right.steps
+    together = host.both(left=dict(by=(0.0, 0.0, -0.05)), right=dict(by=(0.0, 0.0, -0.1)), together=True)
+    # planned once as asked, then with the left arm at the speed that ends it with the right (0.05 m in 0.1/0.12 s)
+    assert [d["arms"]["left"]["speed_m_s"] for d in fake.drafts[-2:]] == [0.12, pytest.approx(0.06)]
+    assert fake.drafts[-1]["arms"]["right"]["speed_m_s"] == 0.12 and len(fake.executed) == 2
+    ends = [fake.executed[-1]["arms"][arm]["time_s"][-1] for arm in ("left", "right")]
+    assert ends[0] == pytest.approx(ends[1]) and together.left.steps == together.right.steps
+    assert together.left.ok and together.right.ok and together.steps == apart.steps
+    # a gripper alone is not stretched
+    host.both(left=dict(grip="open"), right=dict(by=(0.0, 0.0, 0.01)), together=True)
+    assert len(fake.executed) == 3 and fake.drafts[-1]["arms"]["right"]["speed_m_s"] == 0.12
+    # an arm that only turns, and ends first, has no speed to slow
+    text = _failed("NotExecuted", host, "both", left=dict(hand_turn=(0.0, 0.0, 30.0)),
+                   right=dict(by=(0.0, 0.0, 0.1)), together=True)
+    assert text == texts.TOGETHER_REFUSED.format(arm="left", gap=0.1 / 0.12 - 0.12)
+    assert len(fake.executed) == 3
+
+
+def test_both_is_on_the_urai_robot_only():
+    from hexashell.real.franka.proxy import Robot as Fr3Robot
+    from hexashell.real.franka.session import FrankaHost
+    from hexashell.real.urai.proxy import Robot
+
+    calls = []
+    robot = Robot(lambda name, args, kwargs: calls.append((name, args, kwargs)))
+    robot.both(left=dict(by=(0.0, 0.0, 0.01)))
+    robot.both(right=dict(grip="close"), together=True)
+    assert calls == [("both", (), dict(left=dict(by=(0.0, 0.0, 0.01)), right=None, together=False)),
+                     ("both", (), dict(left=None, right=dict(grip="close"), together=True))]
+    assert "both" in repr(robot) and "together" in Robot.both.__doc__
+    assert "both" in UraiHost.public and "both" not in FrankaHost.public
+    assert set(UraiHost.public) - set(FrankaHost.public) == {"both"}
+    fr3 = Fr3Robot(lambda name, args, kwargs: None)
+    assert not hasattr(fr3, "both") and "both" not in repr(fr3) and hasattr(fr3, "goto")
 
 
 def test_gentle_caps_a_fast_host():

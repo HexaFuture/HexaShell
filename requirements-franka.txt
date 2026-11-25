@@ -1,0 +1,4 @@
+# The FR3 service's extra packages on the robot's machine (hexashell/real/franka/server.py), over requirements.txt.
+# franky-control ships its own libfranka; it must match the robot's firmware, see franky's compatibility table.
+franky-control==2.0.0
+pyrealsense2==2.57.7.10387

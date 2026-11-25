@@ -4,8 +4,10 @@
 :class:`~hexashell.real.urai.client.UraiClient` talks to it.
 
 Nothing is planned or simulated: two TCPs over a table at z = 0 with a red 40 mm block.  A goto ends where
-it was sent (plus ``miss``); its path is the straight line, or bulges up by ``bend`` for ``motion="swing"``;
-an execution takes the plan's duration (plus ``overhead_s``) at once.  Fingers that close round the block
+it was sent (plus ``miss``); its path is the straight line, or bulges up by ``bend`` for ``motion="swing"``,
+at its speed throughout (each arm's ``time_s``; the plan lasts as long as its longest arm); a draft that moves
+both arms is refused when their TCPs come within ``ARM_GAP_M`` at the same time; an execution takes the
+plan's duration (plus ``overhead_s``) at once.  Fingers that close round the block
 hold it, and it falls back onto the table when they open.  The pictures are ray-cast from a head camera
 above the table and one camera on each wrist, all with fx != fy.
 """
@@ -29,6 +31,7 @@ EDGE_M = 0.04  # the block's edge
 BLOCK_XY = (0.27, -0.12)
 MAX_OPENING_MM = 70.0
 REACH_M = 0.7  # farther than this from its base, an arm has no plan
+ARM_GAP_M = 0.08  # closer than this, two moving TCPs would hit each other
 BASES = {"left": (0.0, 0.0, 0.0), "right": (0.0, -0.6, 0.0)}
 #: rpy_deg of a tool pointing down whose fingers close along world x (HexaShell: pitch 90, yaw 0, roll 0)
 DOWN_RPY = [180.0, 0.0, 180.0]
@@ -268,8 +271,16 @@ class FakeUrai:
                 path, duration = np.array([now, self.poses[arm][tuple(spec["joints_deg"])][0]]), 0.6
             else:  # gripper, wait
                 path, duration = np.array([now, now]), float(spec["duration_s"])
-            plan["arms"][arm] = {"xyz": path.tolist()}
+            plan["arms"][arm] = {"xyz": path.tolist(), "time_s": np.linspace(0.0, duration, len(path)).tolist()}
             plan["duration_s"] = max(plan["duration_s"], duration)
+        moving = [arm for arm, spec in self.draft["arms"].items() if spec["primitive"] == "goto"]
+        if len(moving) == 2:
+            grid = np.linspace(0.0, plan["duration_s"], 50)
+            at = [np.stack([np.interp(grid, plan["arms"][arm]["time_s"], np.asarray(plan["arms"][arm]["xyz"])[:, k])
+                            for k in range(3)], -1) for arm in moving]
+            gap = float(np.linalg.norm(at[0] - at[1], axis=1).min())
+            if gap < ARM_GAP_M:
+                raise Conflict(f"left would hit the right arm (clearance {gap * 1000:.0f} mm)")
         self.preview = plan
         return plan
 

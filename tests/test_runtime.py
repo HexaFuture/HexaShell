@@ -133,6 +133,28 @@ def test_task_card_skill():
         shutil.rmtree(tmp)
 
 
+def test_task_card_official_text():
+    """Agent Track rules: the card carries RoboDojo's official Description + Scoring verbatim and
+    not the task's name; ladder and skill note are off by default."""
+    import fakes
+    from hexashell.state import parse_obs
+
+    official = "## Description\n\nStack the bowls.\n\n## Scoring\n\n- 0: No bowl is stacked.\n- 100: All stacked."
+    obs = fakes.FakeTable([], task="stack_bowls").obs()
+    obs["extra_info"] = {"detailed_instruction": official}
+    first = parse_obs(obs, seq=1)
+    assert first.detailed_instruction == official
+    settings = Settings()
+    assert not settings.skills and not settings.ladder
+    text, used = card.task_card(first, with_ladder=settings.ladder, with_skill=settings.skills)
+    assert official in text and used["detailed_instruction"] and not used["ladder"] and not used["skill"]
+    assert "stack_bowls" not in text and "Task:" not in text
+    assert text.index("Instruction (from the benchmark") < text.index(official) < text.index("Step budget")
+    obs["extra_info"] = {}
+    text, used = card.task_card(parse_obs(obs, seq=1), with_ladder=False, with_skill=False)
+    assert not used["detailed_instruction"] and "official description" not in text
+
+
 def test_settings_from_env():
     old = dict(os.environ)
     try:

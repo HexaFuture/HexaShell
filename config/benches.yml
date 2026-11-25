@@ -1,4 +1,5 @@
-# HexaShell's agent settings for the benchmarks run by hexashell.benches.run (RoboCasa, ...).
+# HexaShell's agent settings for the benchmarks run by hexashell.benches.run (RoboCasa365, LIBERO-PRO,
+# LIBERO-Pro 2.0, RoboTwin 2.0, SIMPLE, DexJoCo-X) and by the RoboColiseum modules.
 # Each benchmark sets its own limits first (RoboCasa: 40 replies for atomic tasks, 100 for composite
 # ones, 2 h); the values here override them, HEXASHELL_<NAME> variables override these, and
 # --set NAME=VALUE overrides all.  Machine paths are not here: see hexashell/benches/run.py.
@@ -15,9 +16,10 @@ stream: true
 skills: false
 
 nudges: 3
-# the picture window: see xpolicylab/HexaShell/deploy.yml
-images_max: 20
-images_low: 14
+# the picture window: see xpolicylab/HexaShell/deploy.yml.  Our reported RoboCasa365 runs with skills and our
+# LIBERO-PRO and RoboTwin runs used 20 / 14 (RoboCasa365 without skills 50 / 30), see the README
+images_max: 90
+images_low: 60
 images_bytes_max: 10000000
 jpeg_quality: 90
 cell_cpu_s: 120

@@ -112,9 +112,7 @@ Pushing, pressing, turning:
   the way, every held move level: one held slide moves and turns it where pushes take many tries.
 - Press (buttons, keys): close the gripper, point down above the centre, go straight down with
   `contact=True` until the fingertips are about 1 cm below where they touch the top (deeper can
-  pry the closed fingers apart and fling the arm), then straight back up at least 3 cm. A press
-  counts when the button travels far enough down and comes back up. Count every press: some
-  tasks fail on one press too many.
+  pry the closed fingers apart and fling the arm), then straight back up at least 3 cm.
 - To turn a held object, change yaw (or roll) with the arm high above everything. The wrist turns
   only about 178 degrees either way from its middle; `dry_run=True` shows whether a turn is
   possible before you commit.
@@ -128,12 +126,9 @@ Pushing, pressing, turning:
   or deep tilt in one move spills, and a spill cannot be undone. Empty it in one pass:
   a second round costs as much as the first. Turn it back upright over the target before moving
   away, and put it down on a free spot.
-- Things that move by themselves (a conveyor, a falling or rolling object): `robot.wait(n)` lets
-  the time pass without moving the arms.
-- Another arm that takes turns with you (an opponent, an arm that first shows a sequence) may
-  wait until both your arms are back at the start pose before it moves, and moving while it moves
-  can fail the task. Before its turn: release, lift, `robot.home()`, then `robot.wait(100)` and
-  look; while it still moves, wait 15-20 more and look again.
+- Things that move by themselves (a conveyor, a falling or rolling object, another robot arm):
+  `robot.wait(n)` lets the time pass without moving the arms; look again to see whether they are
+  still moving.
 
 The two arms:
 - Each arm reaches its own side best. For something in the middle, check both with `dry_run`.

@@ -1,6 +1,7 @@
 HexaShell
 An agent harness for robot manipulation: RoboDojo's two-arm table tasks, RoboCasa365, LIBERO-PRO,
-RoboTwin 2.0, and a real robot through URAI.
+LIBERO-Pro 2.0, RoboTwin 2.0, RoboColiseum's Genie Sim tasks, SIMPLE's humanoid tasks, DexJoCo-X's
+dexterous-hand tasks, and two real robots (PiPER-X arms through URAI, and a Franka FR3).
 
 HexaShell's code is its own, but it rests on other projects' files, measurements and ideas:
 
@@ -36,8 +37,7 @@ PyRUA-Lean (Apache License 2.0, Copyright 2026 PyRUA-Lean Contributors)
     move, judging a pour by what is left when the container turns back up, homing before a
     benchmark-driven arm's turn, that a bumped container moves, switching arms or reaching with a
     tilted or level hand when one arm cannot reach, that the way a task is done can be checked,
-    and measuring a low object from the top grasp's approach pose; skills/robodojo/hang_mugs.md's level
-    body grasp and level slide onto the peg were seen in a run with that port.
+    and measuring a low object from the top grasp's approach pose.
 
 HexaShell-Preview (HexaShell 1.0; this repository's earlier version, branch v1.0:
   https://github.com/HexaFuture/HexaShell/tree/v1.0)
@@ -60,6 +60,14 @@ LIBERO and LIBERO-PRO (MIT License)
   - the step limits of the test (OFFICIAL_STEPS of hexashell/benches/libero/protocol.py) and its
     10 settling steps are those of LIBERO-PRO's own evaluation.
 
+LIBERO-Pro 2.0 (https://github.com/LIBERO-Pro-Team/LIBERO-Pro2.0, arXiv 2610.24587; its evaluation
+bundle, the Hugging Face dataset zhouxueyang/LIBERO-Pro2.0-Eval, builds on LIBERO and LIBERO-PRO)
+  - hexashell/benches/liberopro2 runs its 339 task instances, controller, cameras and goal checks
+    unchanged, through the bundle's own environment (the libero-remote package and its simulator
+    source); neither is part of this repository;
+  - the task list and the official step limits of hexashell/benches/liberopro2/protocol.py are the
+    bundle's.
+
 RoboTwin 2.0 (MIT License, Copyright (c) 2025 Tianxing Chen)
   - hexashell/assets/robotwin_aloha_arms.urdf holds the joints of the two front arms of RoboTwin's
     aloha-agilex robot, copied from its assets (embodiments/aloha-agilex/urdf/
@@ -77,15 +85,64 @@ RPent (Apache License 2.0)
     (robots/robotwin/eval/demo_randomized.json at commit 886b3b2: 50 tasks, five checked seeds
     each, with their instructions), which gives the task list and a check of the seed scan.
 
+RoboColiseum and Genie Sim, by AgiBot (https://github.com/AgibotTech/genie_sim; its benchmark code
+under the Mozilla Public License 2.0)
+  - hexashell/benches/robocoliseum1 (Season I, Genie Sim 3.5) and hexashell/benches/robocoliseum
+    (Season II, Genie Sim 3.6) speak the benchmark's own policy protocol and, for online runs, the
+    challenge platform's agent protocol; the simulator, its tasks, scenes and scoring run unchanged
+    and are not part of this repository;
+  - the arms' joint origins, axes and limits, the hands' geometry and the cameras' mounts (g2.py,
+    g2_cameras.json, kinematics.py, wuji.py, obs.py there) are numbers read from Genie Sim's robot
+    descriptions and configurations, or measured on its simulator; no meshes;
+  - scripts/setup/geniesim36_container.sh follows Genie Sim's docker/start.sh, and
+    scripts/patches/geniesim36-initialization-timeout.patch changes one waiting time of its startup
+    (local runs only).
+
+SIMPLE (MIT License, Copyright (c) 2025-2026 The SIMPLE Authors)
+  - hexashell/benches/simple runs SIMPLE's humanoid tasks (the Unitree G1 with Dex3 hands), its
+    MuJoCo physics, Isaac Sim pictures, lower-body controllers and success checks unchanged, from
+    SIMPLE's own checkout and environment; none of them is part of this repository;
+  - the lower-body controllers are those SIMPLE ships: AMO (Apache License 2.0, Copyright 2025
+    Jialong Li, Xuxin Cheng, Tianshu Huang, Xiaolong Wang) and GR00T's decoupled whole-body
+    controller (NVIDIA GR00T-WholeBodyControl: code under the Apache License 2.0, weights under the
+    NVIDIA Open Model License); code and weights are loaded from SIMPLE's checkout;
+  - the official step limits (Task.official_steps of hexashell/benches/simple/protocol.py) are the
+    tasks' max_episode_steps, the standing steps before an episode are those of SIMPLE's
+    evaluations (cli/eval.py, cli/eval_decoupled_wbc.py), and fresh layouts follow the steps by
+    which the official episodes were generated (stand, save the stood pose, restore, stand again);
+    the head camera's position on the torso is SIMPLE's.
+
+HITCH (arXiv 2611.08039)
+  - the humanoid's commands in hexashell/benches/simple (posture, walk, palm waypoints, fingers,
+    gaze) and their ranges follow the paper's description; the gaze camera is its active camera.
+
+DexJoCo-X (MIT License, Copyright (c) 2026 DexJoCo-X contributors; its demonstration data under
+CC BY-NC-SA 4.0)
+  - hexashell/benches/dexjoco_x runs DexJoCo-X's six tasks with the Wuji hand: its MuJoCo scenes,
+    the official evaluation's runtime (evaluation/runtime.py: the camera profile, the bounds of one
+    step's wrist motion, the step limits) and its success checks unchanged, from the release's own
+    checkout and environment; none of them is part of this repository;
+  - the named finger shapes (SHAPE_TARGETS of hexashell/benches/dexjoco_x/control.py) are joint
+    targets with which the Wuji demonstrations of its training data (Training v1) closed the hand,
+    and the grasp point's place in the hand was measured on those demonstrations;
+  - the learning and validation seeds are those demonstrations' scene seeds (DEMO_SCENES of
+    hexashell/benches/dexjoco_x/protocol.py) and the test seeds the official evaluation's; the task
+    cards say what each task checks as the environments' code checks it.
+
 URAI (Apache License 2.0, Copyright 2026 Hexafuture Inc. and the URAI authors,
   https://github.com/HexaFuture/URAI)
   - hexashell/real/urai/capsules.py is a copy of the ray-capsule intersection and its pixel windows
     from URAI's urai/robot/scene.py (Capsule, _capsule_hit, _capsule_window, _camera_rays,
     _pixel_rays, _window), with public names and without the capsules' colour;
-  - prompts/urai/*.md are the English real-robot prompts of URAI's HexaShell harness, copied
-    unchanged, and the sentences of hexashell/real/urai/texts.py are that harness's English ones;
+  - prompts/urai/*.md are the English real-robot prompts of URAI's HexaShell harness, with lines
+    added for moves in the hand's own axes and for moving both arms at once, and the sentences of
+    hexashell/real/urai/texts.py are that harness's English ones;
   - hexashell/real/urai follows that harness and talks to URAI only over its HTTP interface; URAI
     itself is not part of this repository.
+
+franka_description, by Franka Robotics (Apache License 2.0)
+  - hexashell/assets/fr3.urdf holds the joint origins, axes and limits of robots/fr3, and
+    hexashell/real/franka/arm.py the Franka Hand's TCP offset, from that package; no meshes.
 
 SAM3 (Meta) runs as a separate local service (services/sam3_server.py); its code and weights are
 not part of this repository.
