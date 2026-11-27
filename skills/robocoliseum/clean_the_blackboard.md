@@ -6,25 +6,25 @@
   0.80). Extra motions cost credit: L5, L15 wiped 77%, 87% in ~160 motions and scored 0.44, 0.40.
 
 ## Flow
-1. measure('eraser') from the start pose: on the desk ~0.72 m ahead, top reads ~0.71 (L0-L15).
+1. measure('eraser') from the start pose: its top, size and grip_yaw on the desk (L0-L15).
 2. Right hand at the offered pitch 75 over its middle, fingers across the narrow side, grasp point
    1 cm above the measured top; close (~5 cm, holding); lift 16 cm (L0-L15; 4/4).
-3. home, drive(turn=180), drive(forward=0.25, left=0.40), body(lean=0, height=1.30): board face
-   0.68-0.71 m ahead (L0-L15; 8/8). Hand pitch -15, yaw 0, roll 0: the pad faces the board.
-4. Map the writing: head picture with grid, to_world on its row ends. A stance reaches ~0.40 m
-   right to ~0.15 m left of the robot at 1.3-1.55 m up, ~0.10 m left near 1.05 m; L15's writing
-   reached 0.57 m left (L0-L15). Dry-run a row's left end before wiping it (L0 t10, L10 t18).
+3. home, drive(turn=180) (the instruction), body(lean=0, height=1.30). to_world on the board face
+   by the writing: drive till it is 0.68-0.71 m ahead and the writing's right end ~0.40 m right,
+   measuring after each (untested). Hand pitch -15, yaw 0, roll 0: the pad faces the board.
+4. Map the writing: grid, to_world on its row ends. A stance reaches ~0.40 m right to ~0.15 m left
+   at 1.3-1.55 m up, ~0.10 m left near 1.05 m (L0-L15); dry-run a row's left end (L0 t10, L10).
 5. Probe once at a written row: contact=True to 1 cm past where the pad meets the face; where the
    hand stops, 3.6-4 cm in front of the face, is the wiping depth (L0-L15 t8-t9; 4/4).
 6. A row is 3 motions, each contact=True: to the row's start 2-3 cm off the board at its height,
    in to the wiping depth, one sideways stroke past the row's far end. Rows ~8 cm apart, only
    where writing is (L10 t11-t22: all wiped in 30 motions; L0 t12-t26: 93% in 45).
-7. Once the stance's reach is clean: hand back to ~0.5 m ahead, drive(left=0.40) (less for a
-   last strip), look with grid, to_world what is left, wipe it (L0 t19, L5 t14, L10 t14, t19).
+7. Once the stance's reach is clean: hand back to ~0.5 m ahead, drive left by 0.40 at most (to put
+   the writing left within the reach), look with grid, to_world it, wipe it (L0 t19, L5, L10).
 8. Leftovers: to_world each mark and run one stroke through it (L10 t23-t24 finished).
 
 ## Verified parameters
-- Eraser ~10 x 4.2 x 2 cm, held long side up on the board; writing 1.0-1.6 m up (L0-L15).
+- The eraser held long side up on the board; measure the writing, its rows and ends (L0-L15).
 
 ## Common failures and fixes
 - Pressing ~2 cm deeper than the probed depth (L5 t23; L15 t22, t26) or stroking upward with the

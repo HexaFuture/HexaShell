@@ -3,7 +3,7 @@
 Units are metres and degrees. One world frame for everything, fixed to the robot's base (on most
 tasks the base does not move; where it drives, see below):
 - x points forward, away from the robot; y to the robot's left; z up from the floor (on a robot
-  whose base is not on the floor, z 0 is at the base: the task card says how high).
+  whose base is not on the floor, z 0 is at the base: the task card says so).
 - Most tasks are at a table in front of the robot, the objects about 0.4 to 0.9 m in front of it.
   Heights and distances differ from scene to scene: measure them.
 - On some robots the torso turns at the waist about the vertical (`robot.waist`; the task card says

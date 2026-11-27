@@ -5,15 +5,18 @@
   r5; 6/6). At the measured middle it read 1.9 and slipped out on the lift (probe L0, L5 r5;
   2/2). With roll left out the start pose's -21 stayed and the pitch-30 moves were refused
   (probe L0, L5 r5).
-- Push with the held puller at pitch 30, yaw -90, the grasp point over the cap's middle (no claw
-  tip measure: the tips showed straight below it, 6 cm down, L5 t12 r5), contact descent, wait
-  30, then lift 12 cm turning to pitch 0 or 15: with the grasp point stopped 4.0 cm above the cap
-  top (a head pixel spot on it gives that height) the cap popped out onto the table (V1 t12, L5
-  t13 r5). Stopped 5.7-6.5 cm above it moved nothing (L0 t6, V1 t7, L5 t8, V6 t7 r5), nor 3.8-4.7
-  cm above but 1.6-2.4 cm off its middle (L0 t10, t14 r5). Pushes copying them, over its middle
-  or 5 mm to the robot's left of it as the model's were, stopped 4.4-4.8 cm above it and left it
-  seated 5/5, with straight or turning lifts (probe L0, L5 r5). An 11-12 cm lift at pitch 15 was
-  refused three times; the offered pitch 0 went (V1 t8, V6 t7 r5; probe L5 r5).
+- Push with the held puller at pitch 30, yaw -90. Measure its claw tips each time, do not assume
+  them (untested on G1): with the grasp point 12-14 cm above the cap top, look with the head and
+  the left wrist (crop and zoom on the puller); to_world on both claw tips (the puller's lowest
+  points, below the hand) and on the cap top; with robot.state, the tips' offset from the grasp
+  point. Move the hand to put the tips' middle over the cap's middle; contact descent aimed at
+  the tips 2 cm below the cap top; wait 30; lift 12 cm turning to pitch 0 or 15 (on G2op tips
+  1.7-2.4 cm below it popped the cap: its note). Records: over its middle with the grasp point
+  stopped 4.0 cm above the cap top it popped out onto the table (V1 t12, L5 t13 r5); 5.7-6.5 cm
+  above moved nothing (L0 t6, V1 t7, L5 t8, V6 t7 r5), nor 3.8-4.7 cm above but 1.6-2.4 cm off
+  its middle (L0 t10, t14 r5); pushes over it or 5 mm to the robot's left stopped 4.4-4.8 cm
+  above and left it seated 5/5 (probe L0, L5 r5). An 11-12 cm lift at pitch 15 was refused
+  three times; the offered pitch 0 went (V1 t8, V6 t7 r5; probe L5 r5).
 - Cap on the table: right arm, pitch 105, contact descent to its top, close (0.8-0.9), lift 5
   cm, then 5 more: it came up (V1 t19-t20, L5 t33-t35 r5). Pitch 80 over the One cap was out of
   reach, 10 cm off (probe L0, L5 r5).

@@ -1,7 +1,7 @@
 # g1_crsemb_pour_50ml_into_graduated_cylinder
 ## Flow
-- pitch 90 was refused (earlier run 4/4). Side grasp on the handle's outer grip bar, 8-8.8 cm from
-  the jug's centre and 4.3-4.6 cm below its top: start 10 cm back along the approach at pitch 30,
+- pitch 90 was refused (earlier run 4/4). Side grasp on the handle's outer grip bar where its ring
+  points put it, 4.3-4.6 cm below the jug's top: start 10 cm back along the approach at pitch 30,
   else 45, yaw = the heading from the handle to the jug's centre, grip open; move on, close: read
   1.0 and held (L0, V1, L5, V6 r6, 8/8; probe L0, L5 r6, 7 of 8).
 - Reach that start by a line: it went in 7 of 8 (probe L0, L5 r6); once it was refused and a
@@ -22,9 +22,9 @@
 - Hold still. The first liquid came 0.9-1.4 s after the tip, a wave of 0.9-1.4 cm of column within
   0.25 s, then 0.6-1.7 cm a second (probe L0, L5 r6; 5/5).
 - From 1.5 s after the tip read the column after each wait of 15 steps and keep every read; start
-  back when two in a row put its top no more than 16.4 cm below the mouth: about 3.0 cm of column
-  was in then (probe L5 r6; passed). On recorded reads this fired at 2.4-3.0 cm in 4 of 5 runs
-  (probe L0, L5 r6); if it never does, start back 3 s after the tip (untested).
+  back when two in a row put its top at the 50 ml level of the pour note (untested so): the reads
+  lag, the column was 0.6 cm short of them then (probe L5 r6; passed), 0.6-1.2 cm in 4 of 5
+  recorded runs (probe L0, L5 r6); if it never fires, start back 3 s after the tip (untested).
 - Back to 60 in one move (34-43 steps): 0.6-1.2 cm more came in, more after a fuller start (probe
   L0, L5 r6; 5/5). Wait 1.75 s, to 30, wait 0.25 s, upright over the mouth, wait 1 s; up 12 cm; over
   the jug's spot at the same angles; to the lift point; down to the grasp height; open; raise 8 cm:
@@ -37,8 +37,8 @@
   L5 r6; nothing in, much outside): correct the height only.
 - During the pour head reads put the column up to 6 cm too high and side reads lagged 0.4-1.2 cm
   (probe L0, L5 r6): go by two side reads in a row.
-- Dropping reads that rose fast held one pour to 3 s: 4.8 cm of column, far over (probe L0 r6): keep
-  every read.
+- Dropping reads that rose fast held one pour to 3 s, far over the level (probe L0 r6): keep every
+  read.
 - Settled side reads came 0.7 cm high and 1.3 cm low (probe L0 r6; 2 runs): never top up on one.
 - Holds of 2.5-2.7 s gave too little (L0 r6, two runs); second pours did not finish in 3 of 4
   (L0, V1, L5 r6): one tip, one hold, one return.

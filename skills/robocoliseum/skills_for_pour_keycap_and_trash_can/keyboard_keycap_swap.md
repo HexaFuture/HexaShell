@@ -5,8 +5,8 @@
   from the post or the table, in a gripper or with the puller; setting it down kept it.
 - Green cap: upright on the empty post, turned like its neighbours, the hand off it (Final checks).
 ## Flow
-1. Measure at head pixels (words found no puller): puller in a grey-blue holder, left front,
-   handle top about 10 cm up; One key above the numpad's 0; green cap right front (L0-L15, V1-V16).
+1. Measure at head pixels (words found no puller): the puller stands in a grey-blue holder; the
+   One key is the one above the numpad's 0; find the green cap in the head picture (L0-L15, V1-V16).
 2. Keyboard turn: from the One key's centre to the Three key's (two keys right), and to the
    Seven key's (two up) less 90, averaged: within 0.4 degrees (probe L0, L5 r5; 8/8). A key
    blob's grip_yaw was 0.1-2.8 degrees off in 11 of 13, 6 and 14 in two (probe L0, L5 r5).
@@ -23,9 +23,9 @@
 7. Let go in steps: gripper to its reading plus 0.02, wait 20, raise 1 cm, then 1 cm more, open
    fully, raise 8 cm: the cap stayed seated and still (probe L0, L5 r5; 3/3).
 ## Verified parameters
-- Handle about 2 x 1.5 cm; One cap about 1.7 x 1.6 cm, 1.2-1.3 cm tall (L0-L15, V1-V16). Holds
-  read: handle agilex 2.1-3.2, arx 1.2-2.6, g1 0.7-1.1, g2op 0.8-1.0 (L0, V1, L5, V6 r5); One cap
-  agilex 1.8-2.3, arx 1.7-1.8; green agilex 1.3-1.8, arx 1.7-1.8, g1 and g2op 0.8-1.1 (probe r5).
+- Holds read: handle agilex 2.1-3.2, arx 1.2-2.6, g1 0.7-1.1, g2op 0.8-1.0 (L0, V1, L5, V6 r5);
+  One cap agilex 1.8-2.3, arx 1.7-1.8; green agilex 1.3-1.8, arx 1.7-1.8, g1 and g2op 0.8-1.1
+  (probe r5). Sizes and heights of the handle and caps: measure them in the episode.
 ## Common failures and fixes
 - With the green resting on the post, 'open' and slack commands left the reading at the holding
   value (9 of 10) though the result said it let go; a raise after a full open then dragged the cap

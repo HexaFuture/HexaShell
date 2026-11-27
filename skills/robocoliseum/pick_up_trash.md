@@ -8,7 +8,7 @@
 
 ## Flow
 1. head(pitch=0); a wall ahead: turn 180, head yaw ±44 (L0-L15; 4/4). Trash: a crushed red drink
-   can and a white paper ball, ~6 cm, on the floor; the bin: red, ~13 cm wide, ~24 cm tall.
+   can and a white paper ball on the floor; the bin: red. Measure each in the episode.
 2. Drive so the piece is 0.94-0.99 m ahead of the base's centre, 0.20-0.24 m to the side of the
    hand that takes it; body(lean=70, height=0.58) (L0-L15; 7/7). Nearer ones: back up (L5 t37).
 3. pitch 90, grip 1, grasp point ~12 cm above the piece; measure again; down to 0.2-0.9 cm under

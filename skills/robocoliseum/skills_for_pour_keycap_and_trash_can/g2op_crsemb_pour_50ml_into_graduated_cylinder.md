@@ -1,8 +1,8 @@
 # g2op_crsemb_pour_50ml_into_graduated_cylinder
 ## Flow
 - Grasp the handle's top bar from straight above: pitch 90, yaw = the heading from the handle to
-  the jug's centre, 10 cm above (100 steps); straight down to the bar about 6 cm from the jug's
-  centre and 3 cm below its top (40); close: read 1.3-1.6 and held to the set-down (probe L0,
+  the jug's centre, 10 cm above (100 steps); straight down to the bar by the jug's body where the
+  ring points put it, 3 cm below the jug's top (40); close: read 1.3-1.6 and held (probe L0,
   L5 r6; 8/8; L0, V1, L5, V6 r6). Lift 24 cm straight up (81-89 steps).
 - Side view: the other wrist about 18-19 cm from the tube, level with its mouth or up to 2 cm
   below, pitch 25, yaw -90 (left wrist) or 90 (right), 131-151 steps by a swing (probe L0, L5 r6).
@@ -16,9 +16,9 @@
   70, 2.2 at 79-87: the stream went in (probe L0, L5 r6; 6 runs, nothing outside in 5).
 - Right arm (L0): tip to 79 and hold still: the first liquid came 1.7-2 s later, then 0.4-0.9 cm of
   column a second (probe L0 r6; 2/2). Read the column in the side picture after each wait of 30
-  steps; start back when two reads in a row put its top no more than 16.4 cm below the mouth;
-  without that after 3.5 s, tip to 82, hold up to 1.5 s, then 85: about 3.2 cm of column at the
-  start back (probe L0 r6; passed; the same on the other run's reads).
+  steps; start back when two reads in a row put its top at the 50 ml level of the pour note;
+  without that after 3.5 s, tip to 82, hold up to 1.5 s, then 85: the column about 0.4 cm short of
+  that level at the start back (probe L0 r6; passed; the same on the other run's reads).
 - Left arm (L5): nothing came at 79 in 3.5 s or at 82 in 1.5 s. Commands of 84-85 reached pitch 3, 4
   or 5: at 5 the first liquid came 1.1-2 s after the tip; at 4 after 1 s, then 0.9 cm every 0.25 s;
   at 3 after 0.75 s (probe L5 r6; 4 runs). A start back at the first liquid still let 1.2-1.4 cm in

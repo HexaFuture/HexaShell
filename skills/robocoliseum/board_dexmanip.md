@@ -13,13 +13,13 @@
 - The first try decided: no object lying knocked over or off its support was lifted again
   (scissors L5-L15 r1, L0, L5 r2, L0 r5; the cup in lid L5-L15 r1; 0/9). Make the first approach
   the careful one, and once an object is up do not let go of it to grasp again (scissors L0 r5).
-- measure() merged objects that touch: packed books read 4-9 cm thick for books of 1.5-1.8 cm,
+- measure() merged objects that touch: packed books read as thick as several books together,
   measured from find at a head pixel (book L0-L15 r2; 4/4), and the scissors with the block under
   them 21 x 10 x 7 cm, the centre 5 cm off (scissors L0 r1, r2; 21.5-23.4 cm long, head view
   only: V1, V6 r5). Take the parts of such an object
   with to_world on head pixels (book L0-L15 r2).
 - A hand at its start pose can hide part of an object from the head: measure() then saw it from
-  the head alone and read it short, 27 cm for 31 cm scissors, with no word that part was hidden,
+  the head alone and read it short (scissors by about an eighth), with no word that part was hidden,
   and find() showed none of its holes (scissors probe L5 r5; 5/11, 10/10). Check the views it
   used; raise that hand 15 cm and measure again (scissors probe L5 r5; 10/10).
 - A lift turned the held scissors in the hand: their rings' line in the head picture went from

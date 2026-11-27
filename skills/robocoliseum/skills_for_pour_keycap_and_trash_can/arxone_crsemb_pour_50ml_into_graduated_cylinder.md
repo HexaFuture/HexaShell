@@ -1,8 +1,9 @@
 # arxone_crsemb_pour_50ml_into_graduated_cylinder
 ## Flow
-- Heights read negative: the table top is about 0.2 m below the base (probe L0, L5 r6).
+- Heights read negative: z 0 is the base, above the table; measure the table's top (an object's
+  on_z) in each episode (probe L0, L5 r6).
 - Grasp from straight above (pitch 90, yaw 90 along the handle): 11 cm above the top bar (76-78
-  steps), straight down to the bar about 7.5 cm from the jug's centre and 2 cm below its top
+  steps), straight down to the bar where its ring points put it, 2 cm below the jug's top
   (35), close: read 1.7-1.9 and held to the set-down (probe L0, L5 r6; 10/10). A close at the
   measured handle centre read 3.2-3.9: open, go 1 cm further out, close again (L0 r6, two runs).
 - Lift 20 cm straight up at pitch 90 (45-46 steps; probe L0, L5 r6; 10/10).

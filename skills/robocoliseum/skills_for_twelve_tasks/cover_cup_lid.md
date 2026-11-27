@@ -2,7 +2,7 @@
 ## Judging
 - Set the lid centred and level on the cup. The cup tips over at a touch: touch only the lid.
 - The task's steps name an arm picking up the cup: leave the cup standing, never grasp or lift it.
-- The lid: a flat, very light disc about 7 cm across and 1.5 cm tall; measure reads 5.3-6 cm across.
+- The lid: a flat, very light disc. measure gave its centre; its width read short (probe L0-L15).
 ## Flow
 1. measure('cup lid', cams=['head']) and measure('cup', cams=['head']) (probe L0-L15; 37/37).
 2. Raise both 15 cm as they start; then, in the next cell, hand(arm, 'point', fingers={'middle':

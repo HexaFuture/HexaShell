@@ -1,5 +1,6 @@
 # arxone_crsemb_hang_cups_on_cup_tree
-- Heights read negative: the table top is about 0.2 m below the arm base (L0-L15, V1-V16).
+- Heights read negative: z 0 is the arm base, above the table; measure the table's top (an
+  object's on_z) in each episode (L0-L15, V1-V16).
 - 'mug handle' and 'wooden cup tree' are found by words from the head (L5 t20, L15 t1-t2, V11);
   near the handle a wrist missed the words 3 times, a pixel worked (V1 t2-t3, V6 t5-t6, V16 t6).
 - Grasp yaw: grip_yaw or the line from the mug's centre to the handle's centre; both came within

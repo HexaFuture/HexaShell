@@ -66,7 +66,7 @@
   L15 t12; 3/3). A shutter pressed by both hands rose 26 cm with the torso from height 0.73 to
   1.05 at lean 45 when the hands pressed deeper before each 8 cm step, by 1.2 cm plus the drift
   body(dry_run=True) gave; raised past 0.88 without that, the hips went back, the hands 1.8-5.4 cm
-  back, and the shutter fell (shutter probe L0 r5). From a grasp point 0.49 m above the floor the
+  back, and the shutter fell (shutter probe L0 r5). From the lowest grasp point they reached the
   hands still went 7-10 mm back at the first step, to 0.81, though the dry run said 4 mm forward;
   2 cm more press then held them (probe L0, L5 r9; 9/9). A torso raise to 1.13-1.20 at the top
   drew them 2.4-4.7 cm back: the shutter fell (2/2).
@@ -92,9 +92,9 @@
 - No message says when a stage passes: after one clear try, check the pictures and go on; retrying
   one hand took 24-61 motions and the rest of the episode (plates r1 L5-L15; L10 t17-t62), the
   shutter's key and foot 74-102 motions (shutter L0, V1, L5, V6 r5).
-- At lean 45, height 1.05-1.13, to_world('head', (320, 8)) read a shutter's face 1.09-1.14 m above
-  the floor while it was down or low, and the floor 1.57-1.82 m beyond the face once it was up
-  (probe L0, L5 r9; 13/13); at height 1.20 that pixel read the face 1.23 m up, standing 1.46 m up.
-- After both hands came off, a shutter pushed up from a grasp point 0.49 m above the floor stayed
-  up (10/10), from 0.53 m it came down at once (6/7); after home and tuck all were down again by
-  the drive (probe L0, L5 r9; 16/16).
+- Is a shutter up: at lean 45, height 1.05-1.13, the head picture's top rows showed its face while
+  it was down or low, and the floor beyond its face line once it was up (probe L0, L5 r9; 13/13):
+  measure the face line first, then to_world on those rows.
+- After both hands came off, a shutter pushed up from the lowest grasp point the hands reached
+  stayed up (10/10), from 4 cm higher it came down at once (6/7); after home and tuck all were
+  down again by the drive (probe L0, L5 r9; 16/16).

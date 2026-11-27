@@ -13,20 +13,22 @@
 2. Pick at `pitch=60` (L0-L15, V; 10/10); `pitch=90` reached the near gears too (V1 ns, V11 ns).
    A gear far on the other side of the body: turn the waist 29-39 degrees toward it, back after
    the lift (V6, V16; 4/4; untested on L). Centre = mean of four rim points seen from 10 cm above
-   in the wrist picture (L5, L10, L15).
+   in the wrist picture (L5, L10, L15). Its thickness T: to_world on its top face and on the table
+   right beside it, in that picture (untested).
 3. Grasp point about 1 cm above the gear's top, 0.5-1 cm off its centre toward the hand's own
    side; close; lift 16-17 cm; offset = grasp point minus gear centre (L0-L15, V1-V16 sk; 8/8).
 4. Over the shaft, same angles: hand = shaft axis + offset, 8-9 cm above the shaft top; then
-   `contact=True` down to the height you grasped at (L5, L15, V1-V16; 11/11 went on the shaft).
+   `contact=True` down toward the disc's top + T + 1 cm, where the grasp point would be with the
+   gear seated (L5, L15, V1-V16; 11/11 went on the shaft; this goal untested).
 5. The hand stops 3.5-7.5 cm above that goal (V; 7/8): open there, lift 15-20 cm, and measure at
    once from a wrist 15-20 cm above the gear and the disc beside it (V6, V16 ns; untested on L).
-6. Gear top 1.7-1.8 cm above the disc's top: seated. Hands away, `robot.wait(150)` twice, touch
+6. Gear top within 0.5 cm of the disc's top + T: seated. Hands away, `robot.wait(150)` twice, touch
    nothing more (L5, L10, V16 sk; 3/3 counted).
-7. About 4 cm (2.8 cm was 1 cm up): caught. Press at once, no wait: closed hand or `grip=0.4`,
-   `pitch=60`, `yaw=0`, grasp point 2-4 cm nearer the robot than the axis, `contact=True` down to
-   3-4 cm above the disc's top; lift; measure; then step 6 (V11 sk, V1 ns; 2/2; untested on L).
+7. 1 cm or more above that: caught. Press at once, no wait: closed hand or `grip=0.4`, `pitch=60`,
+   `yaw=0`, grasp point 2-4 cm nearer the robot than the axis, `contact=True` down to the disc's
+   top + T + 1.5 cm; lift; measure; then step 6 (V11 sk, V1 ns; 2/2; untested on L).
 ## Verified parameters
-- Closes on 6.0-6.3 cm on the gear from the table (L0-L15, V1-V16; 16/16).
+- Closes on the gear from the table read about its measured width (L0-L15, V1-V16; 16/16).
 - A `pitch=90` hand stops with its palm on the shaft's top when the grasp point is about 5.5 cm
   below it (L5, L15; V1, V11, V16, 7 times).
 ## Common failures and fixes
@@ -37,6 +39,6 @@
 - Stopped or blocked moves shove the whole gearbox 3.4-8.5 cm (L10 t8, V11 sk, V16 sk, V6 ns
   t22-t23): measure the axis again after one (V11 sk t20, V16 sk t29). Near a seated gear, none.
 ## Final checks
-- After each release the wrist measure of step 5 decides; press only a caught gear (V1, V6, V11;
-  untested on L).
+- After each release the wrist measure of step 5 against the disc's top + T decides; press only a
+  caught gear (V1, V6, V11; untested on L).
 - Still going after the second wait: measure again; seated, wait again untouched (untested).

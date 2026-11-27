@@ -12,13 +12,13 @@
    from 5 cm above (probe L15; 7/7); go there by straight moves; open fingers. (probe L0-L15)
 3. goto(pose, contact=True); closed fingers; goto(arm, by=(0, 0, 0.05)), no wait; the head picture
    shows the blade end up on the two fingers (probe L0-L15; 25/25), else scoop again (V11 r3).
-4. Rings, first head picture: 'finger hole' outlines inside m, else holes of m: areas of ~m.pixels
-   m encloses (cv2.connectedComponentsWithStats, 100 px or more), centroids (probe L0, L10: within
-   0.5 cm); a ring with no hole there (open, under a finger): the whole ring's centre by eye in
-   look('head', crop=..., zoom=4) (probe L5, L15; opened 2/2); to_world(..., z=s.top - 0.015).
+4. Rings, first head picture after the lift: 'finger hole' outlines inside m, else holes of m:
+   areas of ~m.pixels m encloses (cv2.connectedComponentsWithStats, 100 px or more), centroids
+   (probe L0, L10: within 0.5 cm); a ring with no hole there (open, under a finger): its centre by
+   eye in look('head', crop=..., zoom=4) (probe L5, L15; 2/2). Rings' height R (untested): median
+   to_world without z on 4-6 rim pixels (measure now reads the raised blades); to_world(..., z=R).
 5. At once, the other hand: narrow-ring setting if the centres are under 6.6 cm apart, else wide;
-   thumb target one ring, index the other; tips at s.top - 3.2 cm (the first s, do not measure
-   again); moves as in 2. (probe L0-L15; threaded 16/18)
+   thumb target one ring, index the other; tips at R - 1.7 cm; moves as in 2 (probe L0-L15; 16/18).
 6. Down with contact=True; wait(15) three times; fingers 0.5, 1, 0.5, 0 of the way from thread to
    spread, wait(15) after each; then by=(0, 0, -0.01), contact=True, waits, cycle, twice; a 4th;
    up 1.5 cm, a 5th (probe: opened L5 4/4, L15 wide 2/3, L0 1/3, L10 0/3; L15 r3; V16 r3 1/2).

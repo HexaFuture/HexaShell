@@ -87,8 +87,11 @@ class RobotWords(NamedTuple):
     what: str
     #: where the head camera sits
     head: str = CAMERA_WORDS["head"]
-    #: the height of the robot's base frame (the world frame of the robot calls) above the floor, m
+    #: the height of the robot's base frame (the world frame of the robot calls) above the floor, m, where the
+    #: robot itself fixes it (its model's base_link above its footprint)
     base_z: float = 0.0
+    #: the base frame sits at the arms' mounts, at a height the scene sets: the card says so with no number
+    base_on_mount: bool = False
 
 
 _FIXED_HEAD = "fixed to the robot's body, looking at the work area in front of the robot"
@@ -98,9 +101,10 @@ ROBOT_WORDS = {
     "g2_90d": RobotWords("AgiBot G2, two seven-joint arms on a torso that turns at the waist, with {kind}"),
     "g2_wuji": RobotWords("AgiBot G2, two seven-joint arms on a torso that turns at the waist, with {kind}"),
     "g1": RobotWords("AgiBot G1, two seven-joint arms on a torso that does not turn, with {kind}"),
-    # the base frame of these two is not on the floor: ARX's sits at its arms' mounts, 0.95 m up in its one
-    # Season II scene (the pour task's robot_init_pose); AgileX's base_link is 0.15 m above its footprint
-    "arx": RobotWords("ARX, two six-joint arms on a fixed base, with {kind}", _FIXED_HEAD, 0.95),
+    # the base frame of these two is not on the floor: ARX's sits at its arms' mounts, whose height a scene
+    # sets (no number on the card: the heights are measured in each episode); AgileX's base_link is 0.15 m
+    # above its footprint (its model)
+    "arx": RobotWords("ARX, two six-joint arms on a fixed base, with {kind}", _FIXED_HEAD, base_on_mount=True),
     "agilex": RobotWords("AgileX, two six-joint arms on a fixed base, with {kind}", _FIXED_HEAD, 0.15),
 }
 #: the openings the card gives the gap of
@@ -217,6 +221,10 @@ def robot_lines(frame, driver) -> list[str]:
     if words.base_z:
         lines.append(f"- Heights: z 0 is this robot's base, {words.base_z:.2f} m above the floor (the floor is at "
                      f"z {-words.base_z:.2f}); measure the table's height, do not assume it.")
+    elif words.base_on_mount:
+        lines.append("- Heights: z 0 is this robot's base at its arms' mounts, not the floor, and the scene sets "
+                     "how high that is: a table or an object may read below z 0. Measure the table's height, do "
+                     "not assume it.")
     return lines
 
 

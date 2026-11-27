@@ -1,6 +1,6 @@
 - Pitch 90 went up to about 10 cm above the shoulders' height (the card gives it) and within about
   42 cm in front of them: 1143 of 1206 such poses on the hand's own side. More than 10 cm above it
-  0 of 48 went (the tree 35-45 cm above the table, 29 cm above the paper in write, high lifts),
+  0 of 48 went (the cup tree's hooks, write's high poses over the paper, high lifts),
   beyond 42 cm 76 of 151, more than 25 cm across the middle 0 of 8 (all six tasks, L0-L15,
   V1-V16). Across the middle the yaw decided: the left arm at yaw 90 was refused 5-8 cm right of
   the middle, where yaw -90 went (scrape V11 t6-t7).

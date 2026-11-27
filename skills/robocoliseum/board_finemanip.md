@@ -45,7 +45,8 @@
   depending on how it is held; locate it in a wrist picture after the lift (straw L0, L15;
   pen cap L0-L15; charging V1-V16); it keeps that offset while the pitch stays. `to_world` on a
   held part may say "that pixel shows the robot" and still read right (charging V1, V16); on the
-  network plug's front it read 7-9 mm high (ethernet V1, V6): check it against the pick height.
+  network plug's front it read 7-9 mm high (ethernet V1, V6): check it against what was measured
+  on the table before the pick.
 - A press with `contact=True` pushes what the target stands on: the straw's cup moved 6-12 cm
   over five or six presses (straw L5, L10), stopped or blocked moves shoved the bearing's fixture
   1.7-8.5 cm (bearing L10, V1, V6, V11, V16): measure the target again after each press.

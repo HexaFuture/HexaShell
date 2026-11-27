@@ -27,8 +27,8 @@
    3 cm straight out, one then the other; lift both; look (untested).
 9. The third bowl the same way onto the stack (untested).
 ## Verified parameters
-- Three-view measures: 14.2-15.0 cm across, 7.4-7.7 cm tall (L0-L15 r2); a tilted bowl read
-  10-13 cm tall (L5 t22-t27 r2).
+- Three-view measures of a bowl agreed within 1 cm (L0-L15 r2); a tilted bowl read 2-6 cm
+  taller than upright (L5 t22-t27 r2).
 - Costs: level pose by line 24-81 steps, swing 61-105, home 62-92, contact move 12-16, the lift
   of both 24-26 (L5, L15 r2). Both hands start flat: the squeeze needs no change of shape.
 ## Common failures and fixes

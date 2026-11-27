@@ -7,10 +7,10 @@
 ## Flow
 1. The start picture shows the bag puffed up; after the first motion it lies flat (L0, L5 r1,
    r2). Aim from a picture taken after a motion.
-2. Cans first. Locate each from the head picture: to_world('head', px, z=can top height) on
-   the middle of its top put both within 3 mm (z 0.79 in L0 r2). Heights 4-10 cm off put the
-   points 4-6 cm off (L5 t17, L0 t10 r2). The bin's middle the same way, with z=rim height
-   (L0 t20 r2).
+2. Cans first. Locate each from the head picture: to_world('head', px, z=its top's height, as
+   measured) on the middle of its top put both within 3 mm (L0 r2). Heights 4-10 cm off put the
+   points 4-6 cm off (L5 t17, L0 t10 r2). The bin's middle the same way, with z=its measured rim
+   height (L0 t20 r2).
 3. Left hand, wrap set open (opening 1), level, yaw 90, roll 0: above a point about 9 cm in
    front of the can, down to about 6 cm above the table (lower, its fingers met the table),
    forward with contact=True to the can's middle ("nothing stopped" is right here), close,
@@ -23,12 +23,10 @@
 6. Then the bag: no close lifted it (below). Untried: drag its near edge toward the robot with
    a closed wrap until a flap hangs past the table's near edge, then pinch the flap (untested).
 ## Verified parameters
-- The bin: rim about 17 cm across inside and 20 cm above the table top (L0 r1; L5 t12 r2).
-- Cans: about 6 cm across and 7-9 cm tall, about 30 cm left of the bin's middle, one nearer
-  the robot than it and one farther (L0, L5 r2).
+- The bin's rim and the cans: measure them in the episode (L0, L5 r1-r2).
 - Table top: a pinch pointing down stops on it; the point shape's stop read 3-10 cm below it
   or was pushed aside (L0 t3-t4, t8-t9, L5 t2-t7 r2): do not use it.
-- The bag lies flat right of the bin, its mouth a slit across its near third, a white cord
+- The bag lies flat beside the bin, its mouth a slit across its near third, a white cord
   loop at the mouth's far end (L0 r1).
 - Lifts keeping a tilted or level grasp at the bag were refused past 11-23 cm above the table;
   pointing down the hand went to 40 cm (L0 a2, a3 r1).

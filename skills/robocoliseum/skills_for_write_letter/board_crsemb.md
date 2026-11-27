@@ -17,8 +17,8 @@
   g2op, while results read "±1 mm" (write probe L0, L5 r5, r6): aim later targets back by the mean
   miss.
 - measure() got tops right to about 1 cm, bottoms and heights not: objects standing on the table
-  read their bottoms 1.2-3.7 cm above it, heights 1-4 cm short (jug 7.6-8.1 of 9.2 cm, can 11.5-14
-  of 15.5) and centres 1-2 cm high (pour, trash V1-V16, all four robots; 112 ball and 36 can
+  read their bottoms 1.2-3.7 cm above it, heights 1-4 cm short (against tops and the table read
+  by to_world) and centres 1-2 cm high (pour, trash V1-V16, all four robots; 112 ball and 36 can
   measures; pour probe L0, L5 r5, 48/48), a tube's top 1.3-2.2 cm low from the head (pour g2op probe
   L0 r5; 12 of 16), and small parts and handles seen from the head 1-5 cm too tall (keycap, hang
   V1-V16). Go by the measured top (on a flat sheet, its centre height: write V1-V16; probe L0, L5

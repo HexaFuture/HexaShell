@@ -84,10 +84,10 @@
   both would not back off, one hand at a time 5 cm back went (shutter probe L0 r5; 21 moves).
 - Closed hands pressed on a wall: fingertips down (pitch 45) tipped to 72 under the load and slid,
   fingertips up (pitch -45) drifted to -31, came back to -43 and held (shutter probe L0 r5); lifting
-  a shutter they tipped on: from a grasp point 0.53 m above the floor -43..-48 after the torso and
-  -60..-66 at the top (8/8), from 0.49 m pressed 2 cm again after the first torso step -27..-29 and
-  -30..-35 (probe L0, L5 r9; 7/7). Aimed 1.2-1.5 cm past the head-measured face they stopped with
-  the grasp point 3.1-3.9 cm before it (shutter probe L0 r5).
+  a shutter they tipped on: from a grasp point 4 cm above the lowest -43..-48 after the torso and
+  -60..-66 at the top (8/8), from the lowest, pressed 2 cm again after the first torso step,
+  -27..-29 and -30..-35 (probe L0, L5 r9; 7/7). Aimed 1.2-1.5 cm past the head-measured face they
+  stopped with the grasp point 3.1-3.9 cm before it (shutter probe L0 r5).
 - A press pose that passed its dry run from the start pose was refused from an approach 3.5 cm
   back, and 4 cm higher it went (shutter probe L0 r5): dry-run it again from the approach.
 - Pressed hands re-aimed with absolute targets stopped 4.2-4.5 cm short (L5, V6 r9); a re-seat to

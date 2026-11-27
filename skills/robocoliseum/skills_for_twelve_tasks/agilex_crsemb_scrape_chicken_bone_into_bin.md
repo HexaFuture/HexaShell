@@ -1,5 +1,5 @@
 # agilex_crsemb_scrape_chicken_bone_into_bin
-- V1-V16 all had both items, one 33-45 cm across on the free arm's half or far out in the middle;
+- V1-V16 all had both items, one of them on the free arm's half or far out in the middle;
   no run passed stage 2 (L0-L15, V1-V16; 0/16). Motions are slow (looks 30-274 steps, home
   86-179, held yaw turns 106-176): after the pick only one can look, the free arm's look and push,
   one set-down and one pull (V16 had both lined up when time ran out; untested as a whole).

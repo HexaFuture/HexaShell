@@ -11,7 +11,7 @@
 - The first try decided: no object lying knocked over or off its support was lifted again
   (scissors L5-L15 r1, L0, L5 r2; the cup in lid L5-L15 r1; 0/8). Make the first approach the
   careful one.
-- measure() merged objects that touch: packed books read 4-9 cm thick for books of 1.5-1.8 cm,
+- measure() merged objects that touch: packed books read as thick as several books together,
   measured from find at a head pixel (book L0-L15 r2; 4/4), and the scissors with the block under
   them 21 x 10 x 7 cm, the centre 5 cm off (scissors L0 r1, r2). Take the parts of such an object
   with to_world on head pixels (book L0-L15 r2).

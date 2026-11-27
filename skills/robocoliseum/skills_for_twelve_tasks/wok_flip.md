@@ -21,10 +21,8 @@
 7. Then call finish at once, the pan still in the hand, whatever the pictures show: do not wait,
    move down, flick again or wait for a report of success first (probe L0, L1; 4/4).
 ## Verified parameters
-- The handle: a dark round bar about 2 cm thick from the pan's near side straight at the robot,
-  within 5 cm of the robot's middle, its tip past the stove's front edge; by the pairs the tip is
-  10-16 cm ahead of the start grasp points and 9-10 cm above them, the bar's end at the pan 16-20
-  cm behind the tip and 1-2.5 cm lower (L0, L1 r1-r3; V1, V2 and r3).
+- The handle: a dark round bar on the pan's near side; Flow 1's pairs give both its ends (L0, L1
+  r1-r3; V1, V2 and r3).
 ## Common failures and fixes
 - 4.5 cm behind the tip the pan fell out on the lift (probe L0; 0/2); 5.5 cm behind, any move down
   after the lift let it swing onto the stove (probe L0; 3/3 lost). Use Flow 3's point.

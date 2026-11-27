@@ -6,32 +6,31 @@
 - The insertion decides the score: in once, after 6 motions (V1); V6, V11, V16, L0, L5 and L15 ran
   out of steps after 25-33 motions of pushes and re-posing.
 ## Flow
-1. `robot.measure('phone')` found it in the holder (L0-L15, V1-V16; 8/8): about 15 cm long,
-   `grip_yaw` along its long axis, on a long side, leaning back, screen up and to the robot's right.
+1. `robot.measure('phone')` found it in the holder (L0-L15, V1-V16; 8/8): read its centre, size and
+   `grip_yaw` (along its long axis); see in the head picture which way its screen faces.
 2. Phone: level left hand, `pitch=0`, `yaw=grip_yaw`, rolled to the screen (`roll` -43 to -45);
    grasp point 2-3 cm in from the near end at the phone's measured centre height; stop about 6 cm
    short, slide in, close (1.3-1.5 cm, screen and back), lift 14-15 cm (V1-V16, L0, L5, L15; 7/7).
 3. One line to left `pitch=0, yaw=-90, roll=0` (37-60 steps): the screen stands upright and the
-   free end, where the slot is, lies about 13 cm to the robot's right of the grasp point (V1-V16;
-   4/4; untested in L).
+   free end, where the port is, points to the robot's right (V1-V16; 4/4; untested in L).
 4. Plug: it lies on its narrow edge (L0-L15). Right hand pointing down, yaw along its body by the
    half turn (`grip_yaw` ±180); lower until the grasp point is about 1.2 cm above its top; close
    (0.6-0.8 cm); lift 15 cm (V1, V6, V16; L5, L10 t15).
-5. Right hand to `pitch=90, yaw=90, roll=0` beside the free end (V1 t10, V6 t8, V11 t13, V16 t8):
+5. Port (untested): zoom the head picture on the phone's free end (to_pixel of its far end); the
+   port is the dark slot in the middle of the end face. to_world on the slot, and on the end face
+   right beside it for its depth: the port P and the face's line.
+6. Right hand to `pitch=90, yaw=90, roll=0` 6-8 cm out from P (V1 t10, V6 t8, V11 t13, V16 t8):
    the tip points at the end, its flat sides face the screen and the back. In the right wrist
-   picture the tip lay 1.5-2.4 cm ahead of and 2.3-3.4 cm below the grasp point (V1 t11, V6 t9,
-   V16 t10; untested in L).
-6. The slot is at the left grasp point's depth (the pads centre the phone) and close to its
-   height. Put the tip there, 1-2 cm out from the end face; push toward the robot's left with
-   `contact=True`; keep holding; look. V1: a push with the tip about 0.5 cm above that height met
-   the end face; 0.9 cm lower it went in, the right grasp point 2.5 cm above the left one and
-   within 2 mm of its depth (t14-t17; untested in L).
+   picture to_world on the tip: its offset from the grasp point (it keeps it while the pitch stays).
+7. Grasp point = P - that offset, 1-2 cm out from the end face; look with the right wrist: tip and
+   slot on one line, else move by= their difference (to_world on both). Push toward the robot's
+   left with `contact=True`; keep holding; look (V1: in at t14-t17; untested in this form).
 ## Common failures and fixes
-- Pushes with the tip up to 2 cm above the left grasp point's height (right grasp point 2.6-4.6
-  cm above the left one), or 3-6 mm off its depth, met the end face: none of about 30 went in (V6
-  t12-t26, V11 t16-t35, V16 t11-t29; L0, L5, L15). `pitch` 45-80 did not help (V6, V11, V16).
-- After a miss: back off 1 cm, lower the tip 0.5-1 cm and push again before moving sideways (V1
-  t16: in; untested in L).
+- Pushes aimed by the left grasp point's height and depth, not at the seen port, met the end face:
+  none of about 30 went in (V6 t12-t26, V11 t16-t35, V16 t11-t29; L0, L5, L15). `pitch` 45-80 did
+  not help (V6, V11, V16).
+- After a miss: back off 1 cm, look with the right wrist, to_world on the tip and the slot, move by
+  their difference, push again before any re-posing (a miss 0.5 cm high, 0.9 cm lower went in: V1).
 - Crossed plug: the phone lay flat (left `roll=-90`, L0 t8; held across its width from above, L10
   t12) while the plug's flat sides stood upright (L0 t27, L10 t23; 2/2): out.
 - Wrong end: L5 pushed at the end beside the left hand (t12-t32); use the free end (L0, L5, V1).
@@ -41,5 +40,5 @@
 - "Dropped" after a 2.7 cm close on the plug, yet it was held and the lift counted (V11 t9-t12);
   "holding" at 7.6 cm was the fingertips on the table (L0 t11): look.
 ## Final checks
-- Before each push: the plug's flat sides face the screen and the back, its tip on the phone's
-  long axis at the left grasp point's height (V1; crossed and out: L0 t27, L10 t23).
+- Before each push: the plug's flat sides face the screen and the back; in the right wrist picture
+  its tip and the port's slot on one line, within about 2 mm (untested).
