@@ -35,8 +35,8 @@
   [47,10,-14,41] index [3,2,44,34]; spread thumb [46,-7,-20,2] index [30,-15,4,-9]. (probe L10, L15)
 ## Common failures and fixes
 - path='swing' to the tweezer's 8 cm point swept the scissors 6-7 cm (V11 r3; 2/2; V6 r3). Flow 2.
-- One hole mirrored across the axis read rings 7.2 cm apart as 5.8-6.0 (probe L15), by eye 6.45
-  (V6 r3): narrow, never opened (0/4); wide there opened (probe L15 2/3; L15 r3). Flow 4.
+- One hole mirrored across the axis read the rings too close together (probe L15; by eye: V6
+  r3): narrow, never opened (0/4); wide there opened (probe L15 2/3; L15 r3). Flow 4.
 - Both rings by eye, one 0.8 cm off across the line between them: the hand turned 7 degrees and
   nothing threaded (probe L5; 0/2); a hidden hole's visible middle: never opened (probe L15).
 - Past cycle 5, wider spreads, moved hands or a new scoop never opened them (L0-L10, V6, V16 r3).

@@ -17,8 +17,8 @@
    piece, drive or turn so it lies alike for the right hand, take it (L5, L10, L15 t6-t10; 3/3).
 5. Stand to lean 20, find the red bin, drive till its lid's middle is 0.90-0.95 m straight ahead,
    crouch, measure the lid, drive the rest. At 1.05 m 'near' never counted (L5, L10; L15 t14).
-6. The pedal faced the robot, its middle ~10 cm nearer than the lid's, its top ~6 cm up: measure
-   it from a wrist picture (L5 t16, L10 t18, L15 t15; 3/3).
+6. The pedal faced the robot, low and nearer than the lid: measure it from a wrist picture (L5
+   t16, L10 t18, L15 t15; 3/3).
 7. Press at once: closed right hand, piece in it, pitch 90, at the pedal's middle, 0-2 cm under
    its top, contact=True; it stops on the pedal, the lid stands up; stay (L5, L10, L15; 3/3).
 8. Left piece: raise it, then pitch 45-60, yaw -60 to -90, grasp point over the lid's middle,

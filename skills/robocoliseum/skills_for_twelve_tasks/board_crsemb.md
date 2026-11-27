@@ -11,8 +11,8 @@
   "±1 mm" (write arx V16). Aim the tool's tip where it should end, not past it, and find the tip
   in a picture again after each push (keycap agilex V1 t9, arx V1 t10, g2op V6 t6).
 - measure() got tops right to about 1 cm, bottoms and heights not: objects standing on the table
-  read their bottoms 1.2-3.7 cm above it, heights 1-4 cm short (jug 7.6-8.1 of 9 cm, can
-  11.5-14 of 15.5) and centres 1-2 cm high (pour, trash V1-V16, all four robots; 112 ball and 36
+  read their bottoms 1.2-3.7 cm above it, heights 1-4 cm short (against tops and the table read
+  by to_world) and centres 1-2 cm high (pour, trash V1-V16, all four robots; 112 ball and 36
   can measures), and small parts and handles seen from the head 1-5 cm too tall (keycap, hang
   V1-V16). Go by the measured top (on a flat sheet, its centre height: write V1-V16), and take
   the table's height from a pixel on the bare table (scrape agilex V1-V16).

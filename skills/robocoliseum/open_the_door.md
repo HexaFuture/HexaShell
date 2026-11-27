@@ -17,8 +17,8 @@
    the drives since; this form untested); turn 180 (L0-L15; 8/8). The door is then wide open.
 5. The open leaf lies along the wall by the hinge, lever face toward you; pushes there open it.
    The lever goes straight off the wall, then curves to the doorway; left alone it stays (L0-L15).
-6. Point at the lever in the head picture and measure it (it read 0.5-0.7 m ahead, 0.2-0.3 m
-   right); level grip at its measured height, pitch 0, roll 90 (held 14 times; L0-L15).
+6. Point at the lever in the head picture and measure it; level grip at its measured height,
+   pitch 0, roll 90 (held 14 times; L0-L15).
 7. Arm pull about 0.2 m back and 0.05-0.1 m left, yaw 15-20, contact=True: 90 to 70 (L10 t32),
    81 to 66 (L15 t52), 90 to 82 (L0 t27); no gain once (L5 t68).
 8. Still holding, drive 0.2-0.3 m straight back: 9-14 degrees more though the base barely moved

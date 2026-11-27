@@ -5,7 +5,7 @@
   use this stage's steps. Stage 2: every named item inside the can at once (one of two scored
   nothing); an item that fell in stayed in; motions of both arms use its steps, and six runs
   ran out with the items lined up or one of two in.
-- The can stands at the near edge on the named arm's side, its rim 1.5-6 cm below the table top.
+- The can stands at the near edge on the named arm's side, its rim below the table top: measure it.
 
 ## Flow
 1. At t1: bone and apple core from head pixels, the can as the robot note says. Plan it all:

@@ -13,7 +13,7 @@
   careful one.
 - measure() merged objects that touch: packed books read as thick as several books together,
   measured from find at a head pixel (book L0-L15 r2; 4/4), and the scissors with the block under
-  them 21 x 10 x 7 cm, the centre 5 cm off (scissors L0 r1, r2). Take the parts of such an object
+  them as one object, the centre 5 cm off (scissors L0 r1, r2). Take the parts of such an object
   with to_world on head pixels (book L0-L15 r2).
 - A high score does not tell objects of one kind apart: colour names scored other bowls 0.87-0.95,
   'green bowl' on a beige one (bowls L5 t1, t13, L10 t5 r2). Check the outline in a picture

@@ -15,8 +15,8 @@
   the careful one, and once an object is up do not let go of it to grasp again (scissors L0 r5).
 - measure() merged objects that touch: packed books read as thick as several books together,
   measured from find at a head pixel (book L0-L15 r2; 4/4), and the scissors with the block under
-  them 21 x 10 x 7 cm, the centre 5 cm off (scissors L0 r1, r2; 21.5-23.4 cm long, head view
-  only: V1, V6 r5). Take the parts of such an object
+  them as one object, the centre 5 cm off (scissors L0 r1, r2; head view only: V1, V6 r5).
+  Take the parts of such an object
   with to_world on head pixels (book L0-L15 r2).
 - A hand at its start pose can hide part of an object from the head: measure() then saw it from
   the head alone and read it short (scissors by about an eighth), with no word that part was hidden,
